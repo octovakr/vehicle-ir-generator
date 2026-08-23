@@ -43,6 +43,7 @@ export function generateImpulseResponse(
     environment: config.environment,
     maxReflectionOrder,
     maxDelaySeconds: irDurationSeconds,
+    interiorObjects: config.interiorObjects,
   });
 
   const sampleCount = Math.round(irDurationSeconds * sampleRateHz);
@@ -66,6 +67,7 @@ export function generateImpulseResponse(
     samples,
     metadata: {
       simulatorVersion: SIMULATOR_VERSION,
+      vehicleModelId: config.vehicleModelId,
       vehicle: { ...config.vehicle },
       sourcePosition: { ...source.position },
       microphonePosition: { ...microphone.position },
@@ -77,6 +79,12 @@ export function generateImpulseResponse(
         front: config.materials.front.absorptionCoefficient,
         rear: config.materials.rear.absorptionCoefficient,
       },
+      interiorObjectAbsorption: Object.fromEntries(
+        config.interiorObjects.map((object) => [
+          object.id,
+          object.material.absorptionCoefficient,
+        ]),
+      ),
       environment: { ...config.environment },
       speedOfSoundMetersPerSecond: solverOutput.speedOfSoundMetersPerSecond,
       sampleRateHz,

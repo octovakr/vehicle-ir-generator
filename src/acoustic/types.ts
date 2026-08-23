@@ -16,7 +16,16 @@ export interface Vec3 {
   z: number;
 }
 
-/** Axis-aligned rectangular vehicle interior (MVP geometry). */
+/**
+ * Identifies the cabin geometry the simulator is currently using.
+ *
+ * `rectangular` is the original axis-aligned shoebox (fully user-editable).
+ * Named models replace that shoebox with a cabin derived from a published
+ * vehicle specification sheet and add interior objects (seats, dashboard, …).
+ */
+export type VehicleModelId = 'rectangular' | 'ioniq5-2026' | 'tucson-2026';
+
+/** Axis-aligned rectangular vehicle interior used as the ISM enclosure. */
 export interface VehicleGeometry {
   /** Interior width in meters (x extent). */
   widthMeters: number;
@@ -24,6 +33,41 @@ export interface VehicleGeometry {
   lengthMeters: number;
   /** Interior height in meters (z extent). */
   heightMeters: number;
+}
+
+/** Axis-aligned bounding box in simulation coordinates (meters). */
+export interface AxisAlignedBox {
+  min: Vec3;
+  max: Vec3;
+}
+
+/**
+ * Kind of interior object. Used for visualization and for deciding which
+ * faces generate extra first-order image sources.
+ */
+export type InteriorObjectKind =
+  | 'seat-cushion'
+  | 'seat-back'
+  | 'headrest'
+  | 'dashboard'
+  | 'center-console'
+  | 'steering-wheel';
+
+/**
+ * An interior object that occupies volume inside the cabin.
+ *
+ * Acoustically (see interiorGeometry.ts):
+ *   - the object is an absorbing volume along image-source paths
+ *   - its exposed faces can generate additional first-order reflections
+ *
+ * APPROXIMATION: objects are axis-aligned boxes, not scanned CAD meshes.
+ */
+export interface InteriorObject {
+  id: string;
+  label: string;
+  kind: InteriorObjectKind;
+  bounds: AxisAlignedBox;
+  material: AcousticMaterial;
 }
 
 /**
@@ -119,6 +163,21 @@ export interface MicrophoneConfig {
   mounting: MicrophoneMounting;
 }
 
+/**
+ * One image-source arrival at the microphone. Produced by the ISM solver
+ * and accumulated into h[n] by the IR generator.
+ */
+export interface ImageSourceContribution {
+  /** Propagation delay from image source to microphone, seconds. */
+  propagationDelaySeconds: number;
+  /** Propagation distance, meters. */
+  propagationDistanceMeters: number;
+  /** Signed pressure amplitude of this impulse (dimensionless, re 1 m). */
+  amplitude: number;
+  /** Total number of reflections for this image (0 = direct path). */
+  reflectionOrder: number;
+}
+
 /** Discrete-time simulation parameters. */
 export interface SimulationParams {
   /** Output sample rate in samples/second. */
@@ -136,7 +195,15 @@ export interface SimulationParams {
  * edit this object through the store; the engine consumes it read-only.
  */
 export interface SimulationConfig {
+  /** Which vehicle model produced the current cabin / interior objects. */
+  vehicleModelId: VehicleModelId;
   vehicle: VehicleGeometry;
+  /**
+   * Seats, dashboard and other cabin objects. Empty for the rectangular
+   * default. Consumed by the solver (absorption + extra reflections) and
+   * by the 3D viewport (visualization only).
+   */
+  interiorObjects: InteriorObject[];
   sources: SoundSourceConfig[];
   microphones: MicrophoneConfig[];
   materials: SurfaceMaterials;
@@ -157,10 +224,12 @@ export interface ImpulseResponse {
 
 export interface ImpulseResponseMetadata {
   simulatorVersion: string;
+  vehicleModelId: VehicleModelId;
   vehicle: VehicleGeometry;
   sourcePosition: Vec3;
   microphonePosition: Vec3;
   surfaceAbsorption: Record<SurfaceId, number>;
+  interiorObjectAbsorption: Record<string, number>;
   environment: AcousticEnvironment;
   speedOfSoundMetersPerSecond: number;
   sampleRateHz: number;

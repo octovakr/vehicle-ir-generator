@@ -4,6 +4,13 @@ import { speedOfSoundMetersPerSecond } from './environment';
 import { generateImpulseResponse } from './impulseResponse';
 import { validateSimulationConfig } from './validation';
 import { solveImageSources } from './imageSourceSolver';
+import { deriveCabinGeometry, getVehicleProfile } from './vehicleModels';
+import { foldCoordinate, segmentLengthInsideBox } from './interiorGeometry';
+import {
+  METERS_PER_INCH,
+  TYPICAL_CUV_SEAT_H30_METERS,
+  TYPICAL_FRONT_BACKREST_THICKNESS_METERS,
+} from './constants';
 
 /**
  * Acoustic engine unit tests (rule 25). Tests assert physical relationships
@@ -22,7 +29,9 @@ function makeConfig(overrides?: {
   const beta = overrides?.absorption ?? 0.3;
   const material = { id: 'test', name: 'Test', absorptionCoefficient: beta };
   return {
+    vehicleModelId: 'rectangular',
     vehicle: overrides?.vehicle ?? { widthMeters: 1.5, lengthMeters: 2.8, heightMeters: 1.2 },
+    interiorObjects: [],
     sources: [
       {
         id: 'src-1',
@@ -250,6 +259,162 @@ describe('determinism', () => {
     const a = generate(makeConfig());
     const b = generate(makeConfig());
     expect(Array.from(a.samples)).toEqual(Array.from(b.samples));
+  });
+});
+
+describe('vehicle catalog', () => {
+  it('derives IONIQ 5 cabin width from front shoulder room', () => {
+    const profile = getVehicleProfile('ioniq5-2026');
+    expect(profile.cabin.widthMeters).toBeCloseTo(57.7 * METERS_PER_INCH, 6);
+    expect(profile.cabin.heightMeters).toBeCloseTo(
+      39.8 * METERS_PER_INCH + TYPICAL_CUV_SEAT_H30_METERS,
+      6,
+    );
+    expect(profile.interiorObjects.length).toBeGreaterThan(8);
+    expect(profile.exterior?.bodyStyle).toBe('boxy-crossover');
+  });
+
+  it('derives Tucson cabin from its own interior measurements', () => {
+    const ioniq = getVehicleProfile('ioniq5-2026');
+    const tucson = getVehicleProfile('tucson-2026');
+    expect(tucson.cabin.widthMeters).toBeCloseTo(57.6 * METERS_PER_INCH, 6);
+    expect(tucson.cabin.lengthMeters).not.toBeCloseTo(ioniq.cabin.lengthMeters, 3);
+    expect(tucson.interiorObjects.some((o) => o.id === 'seat-rl-cushion')).toBe(true);
+  });
+
+  it('keeps the derived cabin inside published exterior length', () => {
+    for (const id of ['ioniq5-2026', 'tucson-2026'] as const) {
+      const profile = getVehicleProfile(id);
+      expect(profile.cabin.lengthMeters).toBeLessThan(profile.exterior!.lengthMeters);
+      expect(profile.cabin.widthMeters).toBeLessThan(profile.exterior!.widthMeters);
+    }
+  });
+
+  it('deriveCabinGeometry is deterministic from the same measurements', () => {
+    const interior = getVehicleProfile('ioniq5-2026').interior!;
+    const a = deriveCabinGeometry(interior);
+    const b = deriveCabinGeometry(interior);
+    expect(a).toEqual(b);
+  });
+
+  it('seat backrest AABB leans away from the windshield', () => {
+    const back = getVehicleProfile('ioniq5-2026').interiorObjects.find((o) => o.id === 'seat-fl-back');
+    expect(back).toBeDefined();
+    const depth = back!.bounds.max.y - back!.bounds.min.y;
+    expect(depth).toBeGreaterThan(TYPICAL_FRONT_BACKREST_THICKNESS_METERS);
+    const headrest = getVehicleProfile('ioniq5-2026').interiorObjects.find(
+      (o) => o.id === 'seat-fl-headrest',
+    );
+    expect(headrest!.bounds.min.y).toBeGreaterThan(back!.bounds.min.y);
+  });
+});
+
+describe('interior-object acoustics', () => {
+  it('object volumes change the IR relative to an empty cabin of the same size', () => {
+    const profile = getVehicleProfile('ioniq5-2026');
+    const empty = generate(
+      makeConfig({
+        vehicle: profile.cabin,
+        sourcePosition: { x: 0.4, y: 0.9, z: 0.95 },
+        microphonePosition: { x: 0.73, y: 0.35, z: 1.05 },
+      }),
+    );
+    const occupied = makeConfig({
+      vehicle: profile.cabin,
+      sourcePosition: { x: 0.4, y: 0.9, z: 0.95 },
+      microphonePosition: { x: 0.73, y: 0.35, z: 1.05 },
+    });
+    occupied.vehicleModelId = 'ioniq5-2026';
+    occupied.interiorObjects = profile.interiorObjects;
+    const withObjects = generate(occupied);
+    expect(irsDiffer(empty.samples, withObjects.samples)).toBe(true);
+    expect(withObjects.metadata.vehicleModelId).toBe('ioniq5-2026');
+    expect(Object.keys(withObjects.metadata.interiorObjectAbsorption).length).toBeGreaterThan(0);
+  });
+
+  it('higher seat absorption reduces reflected-plus-object energy', () => {
+    const profile = getVehicleProfile('ioniq5-2026');
+    const base = makeConfig({
+      vehicle: profile.cabin,
+      sourcePosition: { x: 0.35, y: 0.85, z: 0.95 },
+      microphonePosition: { x: 0.8, y: 0.3, z: 1.0 },
+    });
+    const reflective = {
+      ...base,
+      interiorObjects: profile.interiorObjects.map((object) => ({
+        ...object,
+        material: { ...object.material, absorptionCoefficient: 0.1 },
+      })),
+    };
+    const absorptive = {
+      ...base,
+      interiorObjects: profile.interiorObjects.map((object) => ({
+        ...object,
+        material: { ...object.material, absorptionCoefficient: 0.9 },
+      })),
+    };
+    expect(totalEnergy(generate(absorptive).samples)).toBeLessThan(
+      totalEnergy(generate(reflective).samples),
+    );
+  });
+
+  it('IONIQ 5 and Tucson produce different IRs', () => {
+    const ioniq = getVehicleProfile('ioniq5-2026');
+    const tucson = getVehicleProfile('tucson-2026');
+    const ioniqConfig = makeConfig({
+      vehicle: ioniq.cabin,
+      sourcePosition: { x: 0.4, y: 0.9, z: 0.95 },
+      microphonePosition: { x: 0.7, y: 0.35, z: 1.05 },
+    });
+    ioniqConfig.interiorObjects = ioniq.interiorObjects;
+    const tucsonConfig = makeConfig({
+      vehicle: tucson.cabin,
+      sourcePosition: { x: 0.4, y: 0.9, z: 0.95 },
+      microphonePosition: { x: 0.7, y: 0.35, z: 1.05 },
+    });
+    tucsonConfig.interiorObjects = tucson.interiorObjects;
+    expect(irsDiffer(generate(ioniqConfig).samples, generate(tucsonConfig).samples)).toBe(true);
+  });
+
+  it('order 0 with objects still has only the (possibly attenuated) direct path', () => {
+    const profile = getVehicleProfile('ioniq5-2026');
+    const config = makeConfig({
+      vehicle: profile.cabin,
+      maxReflectionOrder: 0,
+      sourcePosition: { x: 0.4, y: 0.9, z: 0.95 },
+      microphonePosition: { x: 0.73, y: 0.35, z: 1.05 },
+    });
+    config.interiorObjects = profile.interiorObjects;
+    expect(generate(config).metadata.imageSourceCount).toBe(1);
+  });
+
+  it('accepts a named-vehicle configuration', () => {
+    const profile = getVehicleProfile('tucson-2026');
+    const config = makeConfig({
+      vehicle: profile.cabin,
+      sourcePosition: { x: 0.4, y: 0.9, z: 0.95 },
+      microphonePosition: { x: 0.73, y: 0.35, z: 1.05 },
+    });
+    config.vehicleModelId = 'tucson-2026';
+    config.interiorObjects = profile.interiorObjects;
+    expect(validateSimulationConfig(config)).toEqual([]);
+  });
+});
+
+describe('interior geometry helpers', () => {
+  it('folds an unfolded coordinate back into the room', () => {
+    expect(foldCoordinate(0.3, 1.5)).toBeCloseTo(0.3);
+    expect(foldCoordinate(-0.3, 1.5)).toBeCloseTo(0.3);
+    expect(foldCoordinate(1.5 + 0.2, 1.5)).toBeCloseTo(1.3);
+  });
+
+  it('measures the length of a segment inside an AABB', () => {
+    const length = segmentLengthInsideBox(
+      { x: 0, y: 0, z: 0.1 },
+      { x: 1, y: 0, z: 0.1 },
+      { min: { x: 0.2, y: -0.1, z: 0 }, max: { x: 0.5, y: 0.1, z: 0.2 } },
+    );
+    expect(length).toBeCloseTo(0.3, 6);
   });
 });
 

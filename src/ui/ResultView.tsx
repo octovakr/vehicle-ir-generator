@@ -166,9 +166,18 @@ function ResultContent({ result }: { result: SimulationResult }): React.JSX.Elem
               {selectedIr.metadata.imageSourceCount.toLocaleString()} image sources · c ={' '}
               {selectedIr.metadata.speedOfSoundMetersPerSecond.toFixed(1)} m/s · max order{' '}
               {selectedIr.metadata.maxReflectionOrder} · {selectedIr.sampleRateHz} Hz ·{' '}
-              {selectedIr.metadata.irDurationSeconds} s · vehicle{' '}
-              {selectedIr.metadata.vehicle.widthMeters}×{selectedIr.metadata.vehicle.lengthMeters}×
-              {selectedIr.metadata.vehicle.heightMeters} m
+              {selectedIr.metadata.irDurationSeconds} s ·{' '}
+              {selectedIr.metadata.vehicleModelId === 'rectangular'
+                ? 'rectangular'
+                : selectedIr.metadata.vehicleModelId === 'ioniq5-2026'
+                  ? '2026 IONIQ 5'
+                  : '2026 Tucson'}{' '}
+              cabin {selectedIr.metadata.vehicle.widthMeters.toFixed(3)}×
+              {selectedIr.metadata.vehicle.lengthMeters.toFixed(3)}×
+              {selectedIr.metadata.vehicle.heightMeters.toFixed(3)} m
+              {Object.keys(selectedIr.metadata.interiorObjectAbsorption).length > 0
+                ? ` · ${Object.keys(selectedIr.metadata.interiorObjectAbsorption).length} interior objects`
+                : ''}
             </div>
           </>
         )}

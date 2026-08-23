@@ -21,7 +21,15 @@ function AppLayout(): React.JSX.Element {
     <div className="app">
       <header className="app-header">
         <div className="app-title">
-          Vehicle IR Simulator<span>Image Source Method · rectangular cabin</span>
+            Vehicle IR Simulator
+            <span>
+              Image Source Method ·{' '}
+              {state.config.vehicleModelId === 'rectangular'
+                ? 'rectangular cabin'
+                : state.config.vehicleModelId === 'ioniq5-2026'
+                  ? '2026 IONIQ 5'
+                  : '2026 Tucson'}
+            </span>
         </div>
         <div className="view-tabs">
           <button

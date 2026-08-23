@@ -1,5 +1,7 @@
 import type {
   AcousticEnvironment,
+  ImageSourceContribution,
+  InteriorObject,
   SurfaceMaterials,
   Vec3,
   VehicleGeometry,
@@ -9,6 +11,9 @@ import {
   MIN_PROPAGATION_DISTANCE_METERS,
   SPREADING_REFERENCE_DISTANCE_METERS,
 } from './constants';
+import { applyObjectAttenuation, firstOrderObjectReflections } from './interiorGeometry';
+
+export type { ImageSourceContribution };
 
 /**
  * Image Source Method (ISM) solver for an axis-aligned rectangular enclosure,
@@ -68,17 +73,6 @@ import {
  * This module is pure math — no UI, rendering, or audio-playback imports.
  */
 
-export interface ImageSourceContribution {
-  /** Propagation delay from image source to microphone, seconds. */
-  propagationDelaySeconds: number;
-  /** Propagation distance, meters. */
-  propagationDistanceMeters: number;
-  /** Signed pressure amplitude of this impulse (dimensionless, re 1 m). */
-  amplitude: number;
-  /** Total number of wall reflections for this image (0 = direct path). */
-  reflectionOrder: number;
-}
-
 export interface ImageSourceSolverInput {
   geometry: VehicleGeometry;
   sourcePosition: Vec3;
@@ -91,6 +85,12 @@ export interface ImageSourceSolverInput {
    * outside the rendered IR buffer anyway). Seconds.
    */
   maxDelaySeconds: number;
+  /**
+   * Optional interior objects (seats, dashboard, …). When present, cabin
+   * image-source paths are attenuated through object volumes and first-order
+   * object-face reflections are added. See interiorGeometry.ts.
+   */
+  interiorObjects?: readonly InteriorObject[];
 }
 
 export interface ImageSourceSolverOutput {
@@ -105,6 +105,7 @@ export interface ImageSourceSolverOutput {
 export function solveImageSources(input: ImageSourceSolverInput): ImageSourceSolverOutput {
   const { geometry, sourcePosition, microphonePosition, materials, environment } = input;
   const maxOrder = input.maxReflectionOrder;
+  const objects = input.interiorObjects ?? [];
 
   const c = speedOfSoundMetersPerSecond(environment);
   const maxDistanceMeters = input.maxDelaySeconds * c;
@@ -163,14 +164,39 @@ export function solveImageSources(input: ImageSourceSolverInput): ImageSourceSol
         const spreading = SPREADING_REFERENCE_DISTANCE_METERS / clampedDistance;
         const amplitude = spreading * amplitudeXY * cz.reflectionAmplitude;
 
-        contributions.push({
+        const imagePosition = { x: cx.coordinate, y: cy.coordinate, z: cz.coordinate };
+        const raw: ImageSourceContribution = {
           propagationDelaySeconds: distanceMeters / c,
           propagationDistanceMeters: distanceMeters,
           amplitude,
           reflectionOrder: totalOrder,
-        });
+        };
+        contributions.push(
+          objects.length > 0
+            ? applyObjectAttenuation(
+                raw,
+                imagePosition,
+                microphonePosition,
+                geometry,
+                objects,
+              )
+            : raw,
+        );
       }
     }
+  }
+
+  if (objects.length > 0 && maxOrder >= 1) {
+    contributions.push(
+      ...firstOrderObjectReflections({
+        sourcePosition,
+        microphonePosition,
+        objects,
+        geometry,
+        speedOfSoundMetersPerSecond: c,
+        maxDelaySeconds: input.maxDelaySeconds,
+      }),
+    );
   }
 
   return { contributions, speedOfSoundMetersPerSecond: c };

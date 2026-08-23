@@ -37,7 +37,12 @@ export function SourcesSection(): React.JSX.Element {
         ...c,
         sources: [
           ...c.sources,
-          createDefaultSource(zone, c.vehicle, c.simulation.randomSeed + c.sources.length + 1),
+          createDefaultSource(
+            zone,
+            c.vehicle,
+            c.simulation.randomSeed + c.sources.length + 1,
+            c.interiorObjects,
+          ),
         ],
       };
     });
@@ -151,7 +156,7 @@ export function SourcesSection(): React.JSX.Element {
               const zoneNumber = Number(zone) as 1 | 2 | 3 | 4;
               updateSource(source.id, {
                 zone: zoneNumber,
-                position: zonePresetPosition(zoneNumber, config.vehicle),
+                position: zonePresetPosition(zoneNumber, config.vehicle, config.interiorObjects),
               });
             }}
             title="Selecting a zone moves the source to that seating preset. Coordinates stay fully editable."

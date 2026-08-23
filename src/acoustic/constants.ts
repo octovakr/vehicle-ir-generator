@@ -3,7 +3,13 @@
  * All defaults live here — do not scatter magic numbers through the code.
  */
 
-export const SIMULATOR_VERSION = '0.1.0';
+export const SIMULATOR_VERSION = '0.2.0';
+
+/** Conversion: 1 inch = 25.4 mm exactly (SI). */
+export const METERS_PER_INCH = 0.0254;
+
+/** Conversion: 1 cubic foot = 0.028316846592 m³ exactly. */
+export const CUBIC_METERS_PER_CUBIC_FOOT = 0.028316846592;
 
 /** Default output sample rate for IRs and rendered audio, samples/second. */
 export const DEFAULT_SAMPLE_RATE_HZ = 16000;
@@ -50,3 +56,85 @@ export const SPREADING_REFERENCE_DISTANCE_METERS = 1;
  * This is a numerical guard, not a physical model.
  */
 export const MIN_PROPAGATION_DISTANCE_METERS = 0.01;
+
+/**
+ * Typical compact-CUV seating reference height (SAE H30, SgRP to heel),
+ * meters. Specification sheets publish headroom, not H30; this value is a
+ * researched class-typical number used to recover floor-to-headliner height
+ * as  cabinHeight ≈ frontHeadroom + H30.
+ *
+ * Sources: SAE J1100 class ranges; compact CUV H30 is commonly ~280–320 mm.
+ */
+export const TYPICAL_CUV_SEAT_H30_METERS = 0.3;
+
+/**
+ * Typical front-bucket seat cushion planform, meters.
+ * RESEARCHED — not published on the Hyundai spec sheets.
+ * Representative of modern compact-CUV bucket seats (cushion cover measurements
+ * and SAE J2732-style planform ranges).
+ */
+export const TYPICAL_FRONT_CUSHION_WIDTH_METERS = 0.52;
+export const TYPICAL_FRONT_CUSHION_DEPTH_METERS = 0.5;
+export const TYPICAL_CUSHION_THICKNESS_METERS = 0.14;
+export const TYPICAL_FRONT_BACKREST_HEIGHT_METERS = 0.64;
+export const TYPICAL_FRONT_BACKREST_THICKNESS_METERS = 0.12;
+/**
+ * Seat-back recline from vertical, radians (~12.6°).
+ * RESEARCHED typical CUV torso/seat-back angle (SAE L40 is often 20–25°;
+ * the visible backrest shell is shallower than the occupant torso angle).
+ * Positive means the top of the backrest is further toward the rear
+ * (away from the windshield).
+ */
+export const TYPICAL_SEAT_BACK_RECLINE_RADIANS = 0.22;
+export const TYPICAL_REAR_CUSHION_DEPTH_METERS = 0.48;
+export const TYPICAL_HEADREST_WIDTH_METERS = 0.26;
+export const TYPICAL_HEADREST_DEPTH_METERS = 0.1;
+export const TYPICAL_HEADREST_HEIGHT_METERS = 0.18;
+
+/** Inset from the cabin side wall to the seat side (door-card thickness). RESEARCHED. */
+export const TYPICAL_DOOR_CARD_THICKNESS_METERS = 0.06;
+
+/** Footwell gap between the dashboard rear face and the front cushion. RESEARCHED. */
+export const TYPICAL_FRONT_FOOTWELL_METERS = 0.18;
+
+/**
+ * Adult seated mouth height above the undepressed seat cushion, meters.
+ * RESEARCHED anthropometric approximation (not a vehicle spec).
+ */
+export const SEATED_MOUTH_ABOVE_CUSHION_METERS = 0.62;
+
+/**
+ * Cargo-area width as a fraction of front shoulder room (wheel-house pinch).
+ * RESEARCHED — used only to invert published cargo volume into a length.
+ */
+export const CARGO_WIDTH_FRACTION_OF_SHOULDER = 0.8;
+
+/**
+ * Cargo-area height as a fraction of cabin height (belt-line / cargo cover).
+ * RESEARCHED — used only to invert published cargo volume into a length.
+ */
+export const CARGO_HEIGHT_FRACTION_OF_CABIN = 0.55;
+
+/**
+ * Broadband amplitude attenuation coefficient α (nepers / meter) applied to
+ * the portion of an image-source path that travels inside an interior object.
+ *
+ *   a *= exp(−α_eff · ℓ)    with    α_eff = α · (0.4 + 0.6 · β)
+ *
+ * APPROXIMATION: this is a stand-in for a missing transmission / diffraction
+ * model of upholstered seats. It is NOT a measured insertion-loss. 3 Np/m is
+ * ~26 dB/m and yields a few dB through a seat back, ~10 dB through a cushion.
+ */
+export const INTERIOR_OBJECT_ATTENUATION_PER_METER = 3;
+
+/** IONIQ 5 slim-cockpit dashboard depth, meters. RESEARCHED (press: "slim cockpit module"). */
+export const IONIQ5_DASHBOARD_DEPTH_METERS = 0.32;
+
+/** Conventional compact-SUV dashboard depth, meters. RESEARCHED. */
+export const TUCSON_DASHBOARD_DEPTH_METERS = 0.4;
+
+export const TYPICAL_DASHBOARD_HEIGHT_METERS = 0.72;
+export const TYPICAL_CONSOLE_WIDTH_METERS = 0.18;
+export const TYPICAL_CONSOLE_HEIGHT_METERS = 0.26;
+export const TYPICAL_STEERING_WHEEL_DIAMETER_METERS = 0.37;
+export const TYPICAL_STEERING_WHEEL_THICKNESS_METERS = 0.035;

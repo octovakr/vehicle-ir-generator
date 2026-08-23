@@ -8,6 +8,9 @@ import {
   MAX_IR_DURATION_SECONDS,
 } from '../acoustic/constants';
 import { useStore } from '../state/store';
+import { applyVehicleModel } from '../state/defaults';
+import { VEHICLE_MODEL_OPTIONS, getVehicleProfile } from '../acoustic/vehicleModels';
+import type { VehicleModelId } from '../acoustic/types';
 import { NumberField, Section, SelectField } from './common';
 import { SourcesSection } from './SourcesSection';
 import { MicrophonesSection } from './MicrophonesSection';
@@ -36,40 +39,20 @@ export function ControlPanel({ onGenerate }: { onGenerate: () => void }): React.
       <SourcesSection />
       <MicrophonesSection />
 
-      <Section title="Vehicle" defaultOpen={false}>
-        <div className="section-note">
-          Interior modeled as a rectangular enclosure. x spans the width, y the length (0 = front),
-          z the height.
-        </div>
-        <div className="field-row">
-          <NumberField
-            label="Width"
-            unit="m"
-            step={0.05}
-            value={config.vehicle.widthMeters}
-            onCommit={(widthMeters) =>
-              updateConfig((c) => ({ ...c, vehicle: { ...c.vehicle, widthMeters } }))
-            }
-          />
-          <NumberField
-            label="Length"
-            unit="m"
-            step={0.05}
-            value={config.vehicle.lengthMeters}
-            onCommit={(lengthMeters) =>
-              updateConfig((c) => ({ ...c, vehicle: { ...c.vehicle, lengthMeters } }))
-            }
-          />
-          <NumberField
-            label="Height"
-            unit="m"
-            step={0.05}
-            value={config.vehicle.heightMeters}
-            onCommit={(heightMeters) =>
-              updateConfig((c) => ({ ...c, vehicle: { ...c.vehicle, heightMeters } }))
-            }
-          />
-        </div>
+      <Section title="Vehicle" defaultOpen>
+        <SelectField
+          label="Model"
+          value={config.vehicleModelId}
+          options={VEHICLE_MODEL_OPTIONS.map((option) => ({
+            value: option.id,
+            label: option.label,
+          }))}
+          onChange={(modelId) =>
+            updateConfig((c) => applyVehicleModel(c, modelId as VehicleModelId))
+          }
+          title="Rectangular enclosure is the default ISM shoebox. Named vehicles use published interior dimensions plus seats and dashboard as extra acoustic objects."
+        />
+        <VehicleModelDetails config={config} updateConfig={updateConfig} />
       </Section>
 
       <MaterialsSection />
@@ -194,4 +177,104 @@ export function ControlPanel({ onGenerate }: { onGenerate: () => void }): React.
       </div>
     </div>
   );
+}
+
+function VehicleModelDetails({
+  config,
+  updateConfig,
+}: {
+  config: SimulationConfig;
+  updateConfig: (update: (c: SimulationConfig) => SimulationConfig) => void;
+}): React.JSX.Element {
+  const profile = getVehicleProfile(config.vehicleModelId);
+  const rectangular = config.vehicleModelId === 'rectangular';
+  const exterior = profile.exterior;
+  const interior = profile.interior;
+
+  return (
+    <>
+      <div className="section-note">{profile.summary}</div>
+
+      {rectangular ? (
+        <>
+          <div className="section-note">
+            Interior modeled as a rectangular enclosure. x spans the width, y the length (0 =
+            front), z the height.
+          </div>
+          <div className="field-row">
+            <NumberField
+              label="Width"
+              unit="m"
+              step={0.05}
+              value={config.vehicle.widthMeters}
+              onCommit={(widthMeters) =>
+                updateConfig((c) => ({ ...c, vehicle: { ...c.vehicle, widthMeters } }))
+              }
+            />
+            <NumberField
+              label="Length"
+              unit="m"
+              step={0.05}
+              value={config.vehicle.lengthMeters}
+              onCommit={(lengthMeters) =>
+                updateConfig((c) => ({ ...c, vehicle: { ...c.vehicle, lengthMeters } }))
+              }
+            />
+            <NumberField
+              label="Height"
+              unit="m"
+              step={0.05}
+              value={config.vehicle.heightMeters}
+              onCommit={(heightMeters) =>
+                updateConfig((c) => ({ ...c, vehicle: { ...c.vehicle, heightMeters } }))
+              }
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="spec-grid">
+            <SpecReadout
+              label="Cabin W×L×H"
+              value={`${fmt(config.vehicle.widthMeters)} × ${fmt(config.vehicle.lengthMeters)} × ${fmt(config.vehicle.heightMeters)} m`}
+            />
+            {exterior && (
+              <SpecReadout
+                label="Exterior L×W×H"
+                value={`${fmt(exterior.lengthMeters)} × ${fmt(exterior.widthMeters)} × ${fmt(exterior.heightMeters)} m`}
+              />
+            )}
+            {interior && (
+              <SpecReadout
+                label="Seating"
+                value={`${interior.seatingCapacity}-seat · 60:40 rear · ${config.interiorObjects.length} interior objects`}
+              />
+            )}
+          </div>
+          <div className="section-note">
+            Cabin dimensions are derived from the specification sheet and are not edited here.
+            Switching model remaps sources to seating-zone mouth positions.
+          </div>
+          <ul className="provenance-list">
+            {profile.provenanceNotes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  );
+}
+
+function SpecReadout({ label, value }: { label: string; value: string }): React.JSX.Element {
+  return (
+    <div className="spec-readout">
+      <span className="spec-label">{label}</span>
+      <span className="spec-value">{value}</span>
+    </div>
+  );
+}
+
+function fmt(value: number): string {
+  return (Math.round(value * 1000) / 1000).toFixed(3);
 }

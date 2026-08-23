@@ -1,10 +1,12 @@
 import type {
+  InteriorObject,
   MicrophoneConfig,
   SimulationConfig,
   SoundSourceConfig,
   SurfaceMaterials,
   Vec3,
   VehicleGeometry,
+  VehicleModelId,
 } from '../acoustic/types';
 import { getMaterialPreset } from '../acoustic/materials';
 import {
@@ -15,10 +17,9 @@ import {
   DEFAULT_RELATIVE_HUMIDITY_PERCENT,
   DEFAULT_SAMPLE_RATE_HZ,
   DEFAULT_TEMPERATURE_CELSIUS,
-  DEFAULT_VEHICLE_HEIGHT_METERS,
-  DEFAULT_VEHICLE_LENGTH_METERS,
-  DEFAULT_VEHICLE_WIDTH_METERS,
+  SEATED_MOUTH_ABOVE_CUSHION_METERS,
 } from '../acoustic/constants';
+import { getVehicleProfile } from '../acoustic/vehicleModels';
 
 /**
  * Default configuration factory and zone presets.
@@ -31,7 +32,29 @@ import {
  * Positions approximate a seated speaker's mouth location and are derived
  * from the vehicle dimensions. Sources may be moved freely afterwards.
  */
-export function zonePresetPosition(zone: 1 | 2 | 3 | 4, vehicle: VehicleGeometry): Vec3 {
+const ZONE_SEAT_PREFIX: Record<1 | 2 | 3 | 4, string> = {
+  1: 'seat-fl-cushion',
+  2: 'seat-fr-cushion',
+  3: 'seat-rl-cushion',
+  4: 'seat-rr-cushion',
+};
+
+export function zonePresetPosition(
+  zone: 1 | 2 | 3 | 4,
+  vehicle: VehicleGeometry,
+  interiorObjects: readonly InteriorObject[] = [],
+): Vec3 {
+  const seat = interiorObjects.find((object) => object.id === ZONE_SEAT_PREFIX[zone]);
+  if (seat) {
+    const { min, max } = seat.bounds;
+    const mouthHeight = Math.min(max.z + SEATED_MOUTH_ABOVE_CUSHION_METERS, vehicle.heightMeters - 0.05);
+    return {
+      x: 0.5 * (min.x + max.x),
+      y: 0.5 * (min.y + max.y),
+      z: mouthHeight,
+    };
+  }
+
   const { widthMeters: W, lengthMeters: L, heightMeters: H } = vehicle;
   const mouthHeight = Math.min(0.75 * H, H - 0.05);
   switch (zone) {
@@ -65,11 +88,12 @@ export function createDefaultSource(
   zone: 1 | 2 | 3 | 4,
   vehicle: VehicleGeometry,
   seed: number,
+  interiorObjects: readonly InteriorObject[] = [],
 ): SoundSourceConfig {
   return {
     id: nextId('source'),
     label: `Source ${idCounter}`,
-    position: zonePresetPosition(zone, vehicle),
+    position: zonePresetPosition(zone, vehicle, interiorObjects),
     gain: 1,
     enabled: true,
     zone,
@@ -105,13 +129,12 @@ function defaultMaterials(): SurfaceMaterials {
 }
 
 export function createDefaultConfig(): SimulationConfig {
-  const vehicle: VehicleGeometry = {
-    widthMeters: DEFAULT_VEHICLE_WIDTH_METERS,
-    lengthMeters: DEFAULT_VEHICLE_LENGTH_METERS,
-    heightMeters: DEFAULT_VEHICLE_HEIGHT_METERS,
-  };
+  const profile = getVehicleProfile('rectangular');
+  const vehicle = { ...profile.cabin };
   return {
+    vehicleModelId: 'rectangular',
     vehicle,
+    interiorObjects: [],
     sources: [createDefaultSource(1, vehicle, DEFAULT_RANDOM_SEED)],
     microphones: [createDefaultMicrophone(vehicle)],
     materials: defaultMaterials(),
@@ -125,5 +148,42 @@ export function createDefaultConfig(): SimulationConfig {
       maxReflectionOrder: DEFAULT_MAX_REFLECTION_ORDER,
       randomSeed: DEFAULT_RANDOM_SEED,
     },
+  };
+}
+
+/**
+ * Replace the current vehicle model. Cabin dimensions, interior objects and
+ * default surface materials come from the catalog. Source / microphone
+ * coordinates are remapped to the new cabin's zone presets — the previous
+ * numbers are not meaningful in a different enclosure, so they are not kept.
+ */
+export function applyVehicleModel(
+  config: SimulationConfig,
+  modelId: VehicleModelId,
+): SimulationConfig {
+  const profile = getVehicleProfile(modelId);
+  const vehicle = { ...profile.cabin };
+  const interiorObjects = profile.interiorObjects;
+  return {
+    ...config,
+    vehicleModelId: modelId,
+    vehicle,
+    interiorObjects,
+    materials: {
+      floor: { ...profile.defaultMaterials.floor },
+      ceiling: { ...profile.defaultMaterials.ceiling },
+      left: { ...profile.defaultMaterials.left },
+      right: { ...profile.defaultMaterials.right },
+      front: { ...profile.defaultMaterials.front },
+      rear: { ...profile.defaultMaterials.rear },
+    },
+    sources: config.sources.map((source) => ({
+      ...source,
+      position: zonePresetPosition(source.zone, vehicle, interiorObjects),
+    })),
+    microphones: config.microphones.map((microphone) => ({
+      ...microphone,
+      position: defaultMicrophonePosition(vehicle),
+    })),
   };
 }

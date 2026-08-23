@@ -1,4 +1,4 @@
-import type { SimulationConfig, Vec3, VehicleGeometry } from './types';
+import type { InteriorObject, SimulationConfig, Vec3, VehicleGeometry } from './types';
 import { ALL_SURFACES } from './types';
 import {
   MAX_DIMENSION_METERS,
@@ -56,6 +56,10 @@ export function validateSimulationConfig(config: SimulationConfig): string[] {
         `${surfaceDisplayName(surface)} absorption coefficient must be between 0 and 1.`,
       );
     }
+  }
+
+  for (const object of config.interiorObjects) {
+    validateInteriorObject(object, vehicle, errors);
   }
 
   if (
@@ -131,6 +135,27 @@ function validatePositionInside(
     errors.push(
       `${subject} is outside the vehicle: z must be between 0 and ${vehicle.heightMeters} m (exclusive).`,
     );
+  }
+}
+
+function validateInteriorObject(
+  object: InteriorObject,
+  vehicle: VehicleGeometry,
+  errors: string[],
+): void {
+  const beta = object.material?.absorptionCoefficient;
+  if (beta === undefined || !Number.isFinite(beta) || beta < 0 || beta > 1) {
+    errors.push(
+      `Interior object "${object.label}" absorption coefficient must be between 0 and 1.`,
+    );
+  }
+  const { min, max } = object.bounds;
+  if (![min.x, min.y, min.z, max.x, max.y, max.z].every(Number.isFinite) || max.x <= min.x || max.y <= min.y || max.z <= min.z) {
+    errors.push(`Interior object "${object.label}" has an invalid bounding box.`);
+    return;
+  }
+  if (max.x <= 0 || min.x >= vehicle.widthMeters || max.y <= 0 || min.y >= vehicle.lengthMeters || max.z <= 0 || min.z >= vehicle.heightMeters) {
+    errors.push(`Interior object "${object.label}" lies entirely outside the vehicle cabin.`);
   }
 }
 

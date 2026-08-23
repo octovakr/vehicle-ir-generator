@@ -8,7 +8,8 @@ import { NumberField, Section, SelectField } from './common';
 
 export function MaterialsSection(): React.JSX.Element {
   const { state, dispatch } = useStore();
-  const { materials } = state.config;
+  const { config } = state;
+  const { materials } = config;
 
   const updateConfig = (update: (c: SimulationConfig) => SimulationConfig): void =>
     dispatch({ type: 'config/update', update });
@@ -42,6 +43,19 @@ export function MaterialsSection(): React.JSX.Element {
         β is the broadband energy absorption coefficient (0 = fully reflective, 1 = fully
         absorptive). Preset values are approximations averaged over 250 Hz – 4 kHz.
       </div>
+      {config.interiorObjects.length > 0 && (
+        <div className="section-note">
+          Interior objects use catalog materials (not editable here) and participate in the IR as
+          absorbing volumes plus first-order face reflections:
+          <ul className="provenance-list">
+            {config.interiorObjects.map((object) => (
+              <li key={object.id}>
+                {object.label}: {object.material.name} (β={object.material.absorptionCoefficient})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {ALL_SURFACES.map((surface) => {
         const material = materials[surface];
         return (

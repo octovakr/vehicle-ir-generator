@@ -171,6 +171,39 @@ body,
   line-height: 1.45;
 }
 
+.spec-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spec-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.spec-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.spec-value {
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.provenance-list {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.4;
+}
+
 /* ── Fields ─────────────────────────────────────────────── */
 .field-row {
   display: flex;
@@ -243,6 +276,11 @@ body,
 
 .item-dot.mic {
   background: var(--mic-color);
+}
+
+.item-dot.interior {
+  background: #8a8078;
+  border-radius: 2px;
 }
 
 .item-title {

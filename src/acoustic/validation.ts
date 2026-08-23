@@ -1,8 +1,9 @@
-import type { InteriorObject, SimulationConfig, Vec3, VehicleGeometry } from './types';
+import type { InteriorObject, OccupantConfig, SimulationConfig, Vec3, VehicleGeometry } from './types';
 import { ALL_SURFACES } from './types';
 import {
   MAX_DIMENSION_METERS,
   MAX_IR_DURATION_SECONDS,
+  MAX_OCCUPANTS,
   MAX_REFLECTION_ORDER_LIMIT,
   MAX_SAMPLE_RATE_HZ,
   MAX_SOURCES,
@@ -56,6 +57,18 @@ export function validateSimulationConfig(config: SimulationConfig): string[] {
         `${surfaceDisplayName(surface)} absorption coefficient must be between 0 and 1.`,
       );
     }
+  }
+
+  if (config.occupants.length > MAX_OCCUPANTS) {
+    errors.push(`At most ${MAX_OCCUPANTS} occupants are supported.`);
+  }
+  const occupiedSeats = new Set<number>();
+  for (const occupant of config.occupants) {
+    validateOccupant(occupant, vehicle, errors);
+    if (occupiedSeats.has(occupant.seat)) {
+      errors.push(`Seat "${occupantSeatName(occupant.seat)}" already has an occupant.`);
+    }
+    occupiedSeats.add(occupant.seat);
   }
 
   for (const object of config.interiorObjects) {
@@ -156,6 +169,29 @@ function validateInteriorObject(
   }
   if (max.x <= 0 || min.x >= vehicle.widthMeters || max.y <= 0 || min.y >= vehicle.lengthMeters || max.z <= 0 || min.z >= vehicle.heightMeters) {
     errors.push(`Interior object "${object.label}" lies entirely outside the vehicle cabin.`);
+  }
+}
+
+function validateOccupant(occupant: OccupantConfig, vehicle: VehicleGeometry, errors: string[]): void {
+  const beta = occupant.material?.absorptionCoefficient;
+  if (beta === undefined || !Number.isFinite(beta) || beta < 0 || beta > 1) {
+    errors.push(`Occupant "${occupant.label}" absorption coefficient must be between 0 and 1.`);
+  }
+  validatePositionInside(occupant.hipPosition, vehicle, `Occupant "${occupant.label}" hip`, errors);
+}
+
+function occupantSeatName(seat: number): string {
+  switch (seat) {
+    case 1:
+      return 'Front left';
+    case 2:
+      return 'Front right';
+    case 3:
+      return 'Rear left';
+    case 4:
+      return 'Rear right';
+    default:
+      return `Seat ${seat}`;
   }
 }
 

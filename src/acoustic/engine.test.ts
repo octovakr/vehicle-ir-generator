@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import type { SimulationConfig, Vec3 } from './types';
+import type { OccupantConfig, SimulationConfig, Vec3 } from './types';
 import { speedOfSoundMetersPerSecond } from './environment';
 import { generateImpulseResponse } from './impulseResponse';
 import { validateSimulationConfig } from './validation';
 import { solveImageSources } from './imageSourceSolver';
 import { deriveCabinGeometry, getVehicleProfile } from './vehicleModels';
 import { foldCoordinate, segmentLengthInsideBox } from './interiorGeometry';
+import {
+  occupantHipPreset,
+  occupantInteriorObjects,
+  occupantMouthPosition,
+} from './occupants';
 import {
   METERS_PER_INCH,
   TYPICAL_CUV_SEAT_H30_METERS,
@@ -32,6 +37,7 @@ function makeConfig(overrides?: {
     vehicleModelId: 'rectangular',
     vehicle: overrides?.vehicle ?? { widthMeters: 1.5, lengthMeters: 2.8, heightMeters: 1.2 },
     interiorObjects: [],
+    occupants: [],
     sources: [
       {
         id: 'src-1',
@@ -415,6 +421,100 @@ describe('interior geometry helpers', () => {
       { min: { x: 0.2, y: -0.1, z: 0 }, max: { x: 0.5, y: 0.1, z: 0.2 } },
     );
     expect(length).toBeCloseTo(0.3, 6);
+  });
+});
+
+describe('occupants', () => {
+  function clothing(beta: number) {
+    return { id: 'clothing', name: 'Clothing (average adult)', absorptionCoefficient: beta };
+  }
+
+  function occupant(overrides?: Partial<OccupantConfig>): OccupantConfig {
+    return {
+      id: 'occ-1',
+      label: 'Front left',
+      enabled: true,
+      seat: 1,
+      hipPosition: { x: 0.4, y: 0.85, z: 0.3 },
+      material: clothing(0.48),
+      ...overrides,
+    };
+  }
+
+  it('adds absorbing body volumes that change the IR', () => {
+    const empty = generate(makeConfig());
+    const withBody = makeConfig();
+    withBody.occupants = [occupant()];
+    expect(irsDiffer(empty.samples, generate(withBody).samples)).toBe(true);
+    expect(generate(withBody).metadata.occupants).toHaveLength(1);
+    expect(Object.keys(generate(withBody).metadata.interiorObjectAbsorption).some((id) => id.startsWith('occ-1-'))).toBe(true);
+  });
+
+  it('a disabled occupant does not change the IR', () => {
+    const empty = generate(makeConfig());
+    const disabled = makeConfig();
+    disabled.occupants = [occupant({ enabled: false })];
+    expect(Array.from(generate(disabled).samples)).toEqual(Array.from(empty.samples));
+  });
+
+  it('higher clothing absorption reduces IR energy', () => {
+    const reflective = makeConfig();
+    reflective.occupants = [occupant({ material: clothing(0.1) })];
+    const absorptive = makeConfig();
+    absorptive.occupants = [occupant({ material: clothing(0.9) })];
+    expect(totalEnergy(generate(absorptive).samples)).toBeLessThan(
+      totalEnergy(generate(reflective).samples),
+    );
+  });
+
+  it('moving an occupant to another seat changes the IR', () => {
+    const left = makeConfig();
+    left.occupants = [occupant({ seat: 1, hipPosition: { x: 0.35, y: 0.8, z: 0.3 } })];
+    const right = makeConfig();
+    right.occupants = [occupant({ seat: 2, hipPosition: { x: 1.15, y: 0.8, z: 0.3 } })];
+    expect(irsDiffer(generate(left).samples, generate(right).samples)).toBe(true);
+  });
+
+  it('rejects a hip position outside the cabin', () => {
+    const config = makeConfig();
+    config.occupants = [occupant({ hipPosition: { x: -0.1, y: 0.8, z: 0.3 } })];
+    const errors = validateSimulationConfig(config);
+    expect(errors.some((message) => message.includes('Occupant "Front left" hip'))).toBe(true);
+  });
+
+  it('rejects two occupants on the same seat', () => {
+    const config = makeConfig();
+    config.occupants = [
+      occupant({ id: 'occ-1', seat: 1 }),
+      occupant({ id: 'occ-2', label: 'Also front left', seat: 1, hipPosition: { x: 0.45, y: 0.9, z: 0.3 } }),
+    ];
+    const errors = validateSimulationConfig(config);
+    expect(errors.some((message) => message.includes('Front left'))).toBe(true);
+  });
+
+  it('builds deterministic occupant boxes on a named-vehicle seat', () => {
+    const profile = getVehicleProfile('ioniq5-2026');
+    const hip = occupantHipPreset(1, profile.cabin, profile.interiorObjects);
+    const a = occupantInteriorObjects(
+      [occupant({ hipPosition: hip })],
+      profile.cabin,
+    );
+    const b = occupantInteriorObjects(
+      [occupant({ hipPosition: hip })],
+      profile.cabin,
+    );
+    expect(a.length).toBeGreaterThanOrEqual(3);
+    expect(a.map((object) => object.id).sort()).toEqual(b.map((object) => object.id).sort());
+    const cushion = profile.interiorObjects.find((object) => object.id === 'seat-fl-cushion')!;
+    expect(hip.x).toBeCloseTo(0.5 * (cushion.bounds.min.x + cushion.bounds.max.x), 6);
+    expect(hip.z).toBeCloseTo(cushion.bounds.max.z, 6);
+  });
+
+  it('places the mouth hint above the hip', () => {
+    const hip = { x: 0.4, y: 0.85, z: 0.3 };
+    const mouth = occupantMouthPosition(hip);
+    expect(mouth.z).toBeGreaterThan(hip.z);
+    expect(mouth.x).toBeCloseTo(hip.x);
   });
 });
 

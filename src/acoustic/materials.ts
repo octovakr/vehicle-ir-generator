@@ -20,6 +20,8 @@ export const MATERIAL_PRESETS: readonly AcousticMaterial[] = [
   { id: 'polyurethane', name: 'Polyurethane foam seat', absorptionCoefficient: 0.6 },
   { id: 'fabric', name: 'Fabric upholstery / headliner', absorptionCoefficient: 0.45 },
   { id: 'carpet', name: 'Automotive carpet', absorptionCoefficient: 0.3 },
+  // Clothing β is a speech-band average, not a measured in-car coefficient.
+  { id: 'clothing', name: 'Clothing (average adult)', absorptionCoefficient: 0.48 },
 ];
 
 /** Look up a preset; returns undefined for unknown ids (e.g. "custom"). */

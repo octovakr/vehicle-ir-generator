@@ -178,6 +178,9 @@ function ResultContent({ result }: { result: SimulationResult }): React.JSX.Elem
               {Object.keys(selectedIr.metadata.interiorObjectAbsorption).length > 0
                 ? ` · ${Object.keys(selectedIr.metadata.interiorObjectAbsorption).length} interior objects`
                 : ''}
+              {selectedIr.metadata.occupants.filter((occupant) => occupant.enabled).length > 0
+                ? ` · ${selectedIr.metadata.occupants.filter((occupant) => occupant.enabled).length} occupant(s)`
+                : ''}
             </div>
           </>
         )}

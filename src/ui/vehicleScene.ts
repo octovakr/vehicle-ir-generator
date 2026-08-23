@@ -4,8 +4,10 @@
  * Rectangular mode: translucent cabin box (original MVP).
  * Named vehicles: a *hollow* stylized body (panels outside the cabin AABB)
  * plus interior objects (seats, dashboard, console) from the catalog.
+ * Occupants are schematic seated mannequins (visualization only).
  * The cabin air volume is not filled with body geometry — that would
- * contradict the acoustic model, which treats only catalog objects as solid.
+ * contradict the acoustic model, which treats only catalog objects and
+ * occupant AABBs as solid.
  *
  * APPROXIMATION: this is a dimension-driven schematic, not a CAD scan.
  * Proportions follow the spec sheet; panel curvature and styling details
@@ -14,10 +16,21 @@
  */
 
 import * as THREE from 'three';
-import type { InteriorObject, SimulationConfig, Vec3 } from '../acoustic/types';
+import type { InteriorObject, OccupantConfig, SimulationConfig, Vec3 } from '../acoustic/types';
 import type { VehicleExteriorSpec, VehicleProfile } from '../acoustic/vehicleModels';
 import { getVehicleProfile } from '../acoustic/vehicleModels';
 import {
+  ADULT_CHEST_DEPTH_METERS,
+  ADULT_HEAD_DEPTH_METERS,
+  ADULT_HEAD_HEIGHT_METERS,
+  ADULT_HEAD_WIDTH_METERS,
+  ADULT_HIP_BREADTH_SITTING_METERS,
+  ADULT_NECK_HEIGHT_METERS,
+  ADULT_SHIN_CLEARANCE_ABOVE_FLOOR_METERS,
+  ADULT_SHOULDER_BREADTH_METERS,
+  ADULT_THIGH_LENGTH_METERS,
+  ADULT_THIGH_THICKNESS_METERS,
+  ADULT_TORSO_HEIGHT_METERS,
   TYPICAL_FRONT_BACKREST_THICKNESS_METERS,
   TYPICAL_SEAT_BACK_RECLINE_RADIANS,
 } from '../acoustic/constants';
@@ -42,6 +55,10 @@ const FABRIC_SEAT = 0x3a424a;
 const HEADREST_COLOR = 0x353028;
 const HEADLINER_COLOR = 0x3a3d42;
 const INNER_TRIM_COLOR = 0x2a2d32;
+const OCCUPANT_SKIN = 0xb89a7c;
+const OCCUPANT_SHIRT = 0x3e4650;
+const OCCUPANT_PANTS = 0x2b3036;
+const OCCUPANT_HAIR = 0x2a2622;
 
 export function simToThree(position: Vec3, cabin: { widthMeters: number; lengthMeters: number }): THREE.Vector3 {
   return new THREE.Vector3(
@@ -61,6 +78,8 @@ export function buildSceneContent(config: SimulationConfig): THREE.Group {
   } else {
     group.add(buildNamedVehicle(config, profile));
   }
+
+  group.add(buildOccupantMeshes(config.occupants, cabin));
 
   for (const source of config.sources) {
     group.add(buildSourceMarker(source.position, source.label, source.enabled, cabin));
@@ -179,6 +198,7 @@ function buildInteriorMeshes(
   const seatColor = leatherSeats ? LEATHER_SEAT : FABRIC_SEAT;
 
   for (const object of objects) {
+    if (object.kind.startsWith('occupant-')) continue;
     const size = {
       x: object.bounds.max.x - object.bounds.min.x,
       y: object.bounds.max.y - object.bounds.min.y,
@@ -232,6 +252,11 @@ function materialForKind(kind: InteriorObject['kind'], seatColor: number): THREE
       return new THREE.MeshStandardMaterial({ color: CONSOLE_COLOR, roughness: 0.5, metalness: 0.1 });
     case 'steering-wheel':
       return new THREE.MeshStandardMaterial({ color: 0x1a1c1f, roughness: 0.45 });
+    case 'occupant-thighs':
+    case 'occupant-torso':
+    case 'occupant-head':
+    case 'occupant-shins':
+      return new THREE.MeshStandardMaterial({ color: OCCUPANT_SKIN, roughness: 0.8 });
   }
 }
 
@@ -416,6 +441,145 @@ function meshBox(
     new THREE.BoxGeometry(width, height, depth),
     new THREE.MeshStandardMaterial({ color, roughness, metalness }),
   );
+}
+
+/**
+ * Schematic seated adult. Visualization only — the solver uses AABB boxes
+ * from occupants.ts, not these capsules.
+ */
+function buildOccupantMeshes(
+  occupants: readonly OccupantConfig[],
+  cabin: { widthMeters: number; lengthMeters: number; heightMeters: number },
+): THREE.Group {
+  const group = new THREE.Group();
+  for (const occupant of occupants) {
+    group.add(buildSeatedMannequin(occupant, cabin));
+  }
+  return group;
+}
+
+function buildSeatedMannequin(
+  occupant: OccupantConfig,
+  cabin: { widthMeters: number; lengthMeters: number },
+): THREE.Group {
+  const root = new THREE.Group();
+  root.position.copy(simToThree(occupant.hipPosition, cabin));
+
+  const opacity = occupant.enabled ? 1 : 0.28;
+  const transparent = !occupant.enabled;
+  const skin = occupantMaterial(OCCUPANT_SKIN, 0.82, opacity, transparent);
+  const shirt = occupantMaterial(OCCUPANT_SHIRT, 0.75, opacity, transparent);
+  const pants = occupantMaterial(OCCUPANT_PANTS, 0.78, opacity, transparent);
+  const hair = occupantMaterial(OCCUPANT_HAIR, 0.7, opacity, transparent);
+
+  const thighRadius = ADULT_THIGH_THICKNESS_METERS / 2;
+  const thighLength = ADULT_THIGH_LENGTH_METERS;
+  const hipBreadth = ADULT_HIP_BREADTH_SITTING_METERS;
+  const shoulder = ADULT_SHOULDER_BREADTH_METERS;
+  const chest = ADULT_CHEST_DEPTH_METERS;
+  const torsoHeight = ADULT_TORSO_HEIGHT_METERS;
+  const shinLength = Math.max(0.16, occupant.hipPosition.z - ADULT_SHIN_CLEARANCE_ABOVE_FLOOR_METERS);
+  const legX = hipBreadth * 0.22;
+
+  const pelvis = new THREE.Mesh(new THREE.SphereGeometry(0.11, 14, 12), pants);
+  pelvis.scale.set(hipBreadth / 0.22, 0.82, 0.92);
+  pelvis.position.set(0, thighRadius * 0.35, 0.01);
+  root.add(pelvis);
+
+  for (const side of [-1, 1]) {
+    const thigh = capsuleMesh(thighRadius * 0.82, thighLength - thighRadius * 1.4, pants);
+    thigh.rotation.x = -Math.PI / 2;
+    thigh.position.set(side * legX, thighRadius * 0.5, -thighLength / 2);
+    root.add(thigh);
+
+    const shin = capsuleMesh(thighRadius * 0.68, shinLength - thighRadius * 1.1, pants);
+    shin.position.set(side * legX, -shinLength / 2 + thighRadius * 0.15, -thighLength + 0.02);
+    root.add(shin);
+
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.045, 0.22), pants);
+    foot.position.set(side * legX, -occupant.hipPosition.z + 0.03, -thighLength - 0.07);
+    root.add(foot);
+  }
+
+  const torsoGroup = new THREE.Group();
+  torsoGroup.position.set(0, thighRadius * 0.45, 0);
+  torsoGroup.rotation.x = TYPICAL_SEAT_BACK_RECLINE_RADIANS;
+
+  const torso = new THREE.Mesh(
+    new THREE.CapsuleGeometry(chest * 0.36, Math.max(0.1, torsoHeight - chest * 0.65), 6, 12),
+    shirt,
+  );
+  torso.scale.set(shoulder / (chest * 0.72), 1, 1);
+  torso.position.set(0, torsoHeight * 0.46, chest * 0.04);
+  torsoGroup.add(torso);
+
+  for (const side of [-1, 1]) {
+    const upperArm = capsuleMesh(0.038, 0.24, shirt);
+    upperArm.position.set(side * (shoulder / 2 - 0.015), torsoHeight * 0.38, 0.02);
+    upperArm.rotation.z = side * 0.28;
+    upperArm.rotation.x = 0.95;
+    torsoGroup.add(upperArm);
+
+    const forearm = capsuleMesh(0.032, 0.22, skin);
+    forearm.position.set(side * (shoulder / 2 + 0.01), torsoHeight * 0.1, -0.14);
+    forearm.rotation.x = 1.25;
+    torsoGroup.add(forearm);
+  }
+
+  const neck = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.038, 0.044, ADULT_NECK_HEIGHT_METERS, 10),
+    skin,
+  );
+  neck.position.set(0, torsoHeight + ADULT_NECK_HEIGHT_METERS / 2, 0.01);
+  torsoGroup.add(neck);
+
+  const headRadius = ADULT_HEAD_HEIGHT_METERS * 0.48;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(headRadius, 16, 14), skin);
+  head.scale.set(
+    ADULT_HEAD_WIDTH_METERS / (headRadius * 2),
+    1,
+    ADULT_HEAD_DEPTH_METERS / (headRadius * 2),
+  );
+  head.position.set(0, torsoHeight + ADULT_NECK_HEIGHT_METERS + headRadius * 0.85, 0.02);
+  torsoGroup.add(head);
+
+  const hairMesh = new THREE.Mesh(new THREE.SphereGeometry(headRadius * 0.88, 12, 10), hair);
+  hairMesh.scale.set(0.98, 0.55, 0.92);
+  hairMesh.position.set(0, torsoHeight + ADULT_NECK_HEIGHT_METERS + headRadius * 1.15, 0);
+  torsoGroup.add(hairMesh);
+
+  root.add(torsoGroup);
+  root.add(
+    makeLabelSprite(
+      occupant.label,
+      new THREE.Vector3(0, torsoHeight + ADULT_HEAD_HEIGHT_METERS + 0.18, 0.04),
+      '#c4b08a',
+    ),
+  );
+  return root;
+}
+
+function capsuleMesh(radius: number, cylinderLength: number, material: THREE.Material): THREE.Mesh {
+  return new THREE.Mesh(
+    new THREE.CapsuleGeometry(radius, Math.max(0.02, cylinderLength), 4, 8),
+    material,
+  );
+}
+
+function occupantMaterial(
+  color: number,
+  roughness: number,
+  opacity: number,
+  transparent: boolean,
+): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness,
+    metalness: 0.02,
+    transparent,
+    opacity,
+    depthWrite: !transparent,
+  });
 }
 
 function buildSourceMarker(

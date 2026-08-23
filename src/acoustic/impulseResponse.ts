@@ -6,6 +6,7 @@ import type {
 } from './types';
 import { solveImageSources } from './imageSourceSolver';
 import { SIMULATOR_VERSION } from './constants';
+import { acousticInteriorObjects } from './occupants';
 
 /**
  * Accumulates image-source contributions into a discrete-time impulse
@@ -43,7 +44,7 @@ export function generateImpulseResponse(
     environment: config.environment,
     maxReflectionOrder,
     maxDelaySeconds: irDurationSeconds,
-    interiorObjects: config.interiorObjects,
+    interiorObjects: acousticInteriorObjects(config),
   });
 
   const sampleCount = Math.round(irDurationSeconds * sampleRateHz);
@@ -80,11 +81,18 @@ export function generateImpulseResponse(
         rear: config.materials.rear.absorptionCoefficient,
       },
       interiorObjectAbsorption: Object.fromEntries(
-        config.interiorObjects.map((object) => [
+        acousticInteriorObjects(config).map((object) => [
           object.id,
           object.material.absorptionCoefficient,
         ]),
       ),
+      occupants: config.occupants.map((occupant) => ({
+        id: occupant.id,
+        seat: occupant.seat,
+        enabled: occupant.enabled,
+        hipPosition: { ...occupant.hipPosition },
+        absorptionCoefficient: occupant.material.absorptionCoefficient,
+      })),
       environment: { ...config.environment },
       speedOfSoundMetersPerSecond: solverOutput.speedOfSoundMetersPerSecond,
       sampleRateHz,

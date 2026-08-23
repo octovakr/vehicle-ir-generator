@@ -51,7 +51,11 @@ export type InteriorObjectKind =
   | 'headrest'
   | 'dashboard'
   | 'center-console'
-  | 'steering-wheel';
+  | 'steering-wheel'
+  | 'occupant-thighs'
+  | 'occupant-torso'
+  | 'occupant-head'
+  | 'occupant-shins';
 
 /**
  * An interior object that occupies volume inside the cabin.
@@ -164,6 +168,37 @@ export interface MicrophoneConfig {
 }
 
 /**
+ * Logical seating slot used as an occupant placement preset.
+ * Matches source zones 1–4. Coordinates remain fully editable afterwards.
+ */
+export type OccupantSeatId = 1 | 2 | 3 | 4;
+
+/**
+ * A seated occupant inside the cabin.
+ *
+ * Occupants are independent of speech sources: a source remains an
+ * omnidirectional point (typically near the mouth). The occupant is an
+ * extra absorbing / reflecting body that participates in the IR.
+ *
+ * APPROXIMATION: the solver uses a handful of axis-aligned boxes derived
+ * from 50th-percentile seated-adult anthropometry, not a scanned mesh,
+ * articulated skeleton, or clothing-layer model. See occupants.ts.
+ */
+export interface OccupantConfig {
+  id: string;
+  label: string;
+  enabled: boolean;
+  seat: OccupantSeatId;
+  /**
+   * Approximate SAE H-point (hip joint) in cabin coordinates, meters.
+   * Body-part boxes are derived from this origin plus seated anthropometry.
+   */
+  hipPosition: Vec3;
+  /** Clothing / body-surface material. Energy absorption coefficient β. */
+  material: AcousticMaterial;
+}
+
+/**
  * One image-source arrival at the microphone. Produced by the ISM solver
  * and accumulated into h[n] by the IR generator.
  */
@@ -204,6 +239,11 @@ export interface SimulationConfig {
    * by the 3D viewport (visualization only).
    */
   interiorObjects: InteriorObject[];
+  /**
+   * Seated occupants placed by the user. Converted to extra InteriorObject
+   * boxes at solve time (occupants.ts) — not mixed into the vehicle catalog.
+   */
+  occupants: OccupantConfig[];
   sources: SoundSourceConfig[];
   microphones: MicrophoneConfig[];
   materials: SurfaceMaterials;
@@ -230,6 +270,13 @@ export interface ImpulseResponseMetadata {
   microphonePosition: Vec3;
   surfaceAbsorption: Record<SurfaceId, number>;
   interiorObjectAbsorption: Record<string, number>;
+  occupants: Array<{
+    id: string;
+    seat: OccupantSeatId;
+    enabled: boolean;
+    hipPosition: Vec3;
+    absorptionCoefficient: number;
+  }>;
   environment: AcousticEnvironment;
   speedOfSoundMetersPerSecond: number;
   sampleRateHz: number;

@@ -56,6 +56,12 @@ export function MaterialsSection(): React.JSX.Element {
           </ul>
         </div>
       )}
+      {config.occupants.some((occupant) => occupant.enabled) && (
+        <div className="section-note">
+          Enabled occupants add extra body volumes (Occupants section). Clothing β is an
+          approximation, not a measured in-car insertion loss.
+        </div>
+      )}
       {ALL_SURFACES.map((surface) => {
         const material = materials[surface];
         return (

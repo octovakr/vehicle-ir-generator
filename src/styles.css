@@ -14,6 +14,7 @@
   --accent-hover: #6d79e0;
   --source-color: #e0964f;
   --mic-color: #58a6ff;
+  --occupant-color: #c4b08a;
   --danger: #e5534b;
   --ok: #4cae6e;
   font-size: 14px;
@@ -276,6 +277,10 @@ body,
 
 .item-dot.mic {
   background: var(--mic-color);
+}
+
+.item-dot.occupant {
+  background: var(--occupant-color);
 }
 
 .item-dot.interior {

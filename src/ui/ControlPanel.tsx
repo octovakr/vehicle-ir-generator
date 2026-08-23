@@ -14,6 +14,7 @@ import type { VehicleModelId } from '../acoustic/types';
 import { NumberField, Section, SelectField } from './common';
 import { SourcesSection } from './SourcesSection';
 import { MicrophonesSection } from './MicrophonesSection';
+import { OccupantsSection } from './OccupantsSection';
 import { MaterialsSection } from './MaterialsSection';
 
 const SAMPLE_RATE_OPTIONS = [
@@ -38,6 +39,7 @@ export function ControlPanel({ onGenerate }: { onGenerate: () => void }): React.
     <div className="control-panel">
       <SourcesSection />
       <MicrophonesSection />
+      <OccupantsSection />
 
       <Section title="Vehicle" defaultOpen>
         <SelectField

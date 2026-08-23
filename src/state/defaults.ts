@@ -1,6 +1,8 @@
 import type {
   InteriorObject,
   MicrophoneConfig,
+  OccupantConfig,
+  OccupantSeatId,
   SimulationConfig,
   SoundSourceConfig,
   SurfaceMaterials,
@@ -19,6 +21,7 @@ import {
   DEFAULT_TEMPERATURE_CELSIUS,
   SEATED_MOUTH_ABOVE_CUSHION_METERS,
 } from '../acoustic/constants';
+import { occupantHipPreset, occupantSeatLabel } from '../acoustic/occupants';
 import { getVehicleProfile } from '../acoustic/vehicleModels';
 
 /**
@@ -111,6 +114,27 @@ export function createDefaultMicrophone(vehicle: VehicleGeometry): MicrophoneCon
   };
 }
 
+function defaultClothingMaterial() {
+  const clothing = getMaterialPreset('clothing');
+  if (!clothing) throw new Error('Missing clothing material preset');
+  return { ...clothing };
+}
+
+export function createDefaultOccupant(
+  seat: OccupantSeatId,
+  vehicle: VehicleGeometry,
+  interiorObjects: readonly InteriorObject[] = [],
+): OccupantConfig {
+  return {
+    id: nextId('occupant'),
+    label: occupantSeatLabel(seat),
+    enabled: true,
+    seat,
+    hipPosition: occupantHipPreset(seat, vehicle, interiorObjects),
+    material: defaultClothingMaterial(),
+  };
+}
+
 function defaultMaterials(): SurfaceMaterials {
   // Typical sedan interior: carpet floor, fabric headliner, trimmed doors,
   // glass windshield, mixed rear (parcel shelf + glass).
@@ -135,6 +159,7 @@ export function createDefaultConfig(): SimulationConfig {
     vehicleModelId: 'rectangular',
     vehicle,
     interiorObjects: [],
+    occupants: [],
     sources: [createDefaultSource(1, vehicle, DEFAULT_RANDOM_SEED)],
     microphones: [createDefaultMicrophone(vehicle)],
     materials: defaultMaterials(),
@@ -154,8 +179,9 @@ export function createDefaultConfig(): SimulationConfig {
 /**
  * Replace the current vehicle model. Cabin dimensions, interior objects and
  * default surface materials come from the catalog. Source / microphone
- * coordinates are remapped to the new cabin's zone presets — the previous
- * numbers are not meaningful in a different enclosure, so they are not kept.
+ * coordinates and occupant hip positions are remapped to the new cabin's
+ * seating presets — the previous numbers are not meaningful in a different
+ * enclosure, so they are not kept. Occupants themselves are preserved.
  */
 export function applyVehicleModel(
   config: SimulationConfig,
@@ -169,6 +195,10 @@ export function applyVehicleModel(
     vehicleModelId: modelId,
     vehicle,
     interiorObjects,
+    occupants: config.occupants.map((occupant) => ({
+      ...occupant,
+      hipPosition: occupantHipPreset(occupant.seat, vehicle, interiorObjects),
+    })),
     materials: {
       floor: { ...profile.defaultMaterials.floor },
       ceiling: { ...profile.defaultMaterials.ceiling },

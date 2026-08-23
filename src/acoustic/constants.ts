@@ -3,7 +3,7 @@
  * All defaults live here — do not scatter magic numbers through the code.
  */
 
-export const SIMULATOR_VERSION = '0.2.0';
+export const SIMULATOR_VERSION = '0.3.0';
 
 /** Conversion: 1 inch = 25.4 mm exactly (SI). */
 export const METERS_PER_INCH = 0.0254;
@@ -40,6 +40,8 @@ export const MIN_IR_DURATION_SECONDS = 0.05;
 export const MAX_IR_DURATION_SECONDS = 4;
 export const MAX_REFLECTION_ORDER_LIMIT = 60;
 export const MAX_SOURCES = 6;
+/** Maximum seated occupants the user may place (one per seating zone). */
+export const MAX_OCCUPANTS = 4;
 
 /** Default duration of generated robotic test speech, seconds. */
 export const DEFAULT_GENERATED_SPEECH_SECONDS = 3;
@@ -102,6 +104,32 @@ export const TYPICAL_FRONT_FOOTWELL_METERS = 0.18;
  * RESEARCHED anthropometric approximation (not a vehicle spec).
  */
 export const SEATED_MOUTH_ABOVE_CUSHION_METERS = 0.62;
+
+/**
+ * 50th-percentile seated adult (male class) body dimensions, meters.
+ * RESEARCHED from ISO 7250-1 / SAE J826 / ANSUR II class ranges — not a
+ * vehicle specification and not a scanned individual.
+ *
+ * Used only to build the occupant AABB approximation and the viewport
+ * mannequin. The two representations share these numbers so the visual
+ * figure occupies roughly the same volume the solver attenuates through.
+ */
+export const ADULT_HIP_BREADTH_SITTING_METERS = 0.38;
+export const ADULT_SHOULDER_BREADTH_METERS = 0.44;
+export const ADULT_CHEST_DEPTH_METERS = 0.24;
+export const ADULT_TORSO_HEIGHT_METERS = 0.52;
+export const ADULT_HEAD_WIDTH_METERS = 0.16;
+export const ADULT_HEAD_DEPTH_METERS = 0.2;
+export const ADULT_HEAD_HEIGHT_METERS = 0.22;
+export const ADULT_NECK_HEIGHT_METERS = 0.06;
+export const ADULT_THIGH_LENGTH_METERS = 0.42;
+export const ADULT_THIGH_THICKNESS_METERS = 0.14;
+export const ADULT_SHIN_DEPTH_METERS = 0.11;
+export const ADULT_SHIN_CLEARANCE_ABOVE_FLOOR_METERS = 0.02;
+/** Mouth height above the H-point. Matches SEATED_MOUTH_ABOVE_CUSHION when hip sits on the cushion. */
+export const ADULT_MOUTH_ABOVE_HIP_METERS = 0.6;
+/** Offset of the hip rearward of the cushion planform center, toward the bight, meters. */
+export const OCCUPANT_HIP_AFT_OF_CUSHION_CENTER_METERS = 0.08;
 
 /**
  * Cargo-area width as a fraction of front shoulder room (wheel-house pinch).

@@ -91,6 +91,7 @@ export function Viewport3D({ config }: { config: SimulationConfig }): React.JSX.
   }, [config]);
 
   const namedVehicle = config.vehicleModelId !== 'rectangular';
+  const hasOccupants = config.occupants.length > 0;
 
   return (
     <div className="viewport" ref={containerRef}>
@@ -101,6 +102,11 @@ export function Viewport3D({ config }: { config: SimulationConfig }): React.JSX.
         <div className="legend-row">
           <span className="item-dot mic" /> Microphone
         </div>
+        {hasOccupants && (
+          <div className="legend-row">
+            <span className="item-dot occupant" /> Occupant
+          </div>
+        )}
         {namedVehicle && (
           <div className="legend-row">
             <span className="item-dot interior" /> Seats / interior

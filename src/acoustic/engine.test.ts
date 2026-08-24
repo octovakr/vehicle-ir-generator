@@ -12,6 +12,15 @@ import {
   occupantMouthPosition,
 } from './occupants';
 import {
+  applyMicrophoneMounting,
+  baffleCutoffHz,
+  defaultMicrophoneOrientation,
+  defaultMicrophonePositionForMounting,
+  firstOrderHighpassInPlace,
+  localBaffleContributions,
+  reflectPointAcrossPlane,
+} from './microphoneMounting';
+import {
   METERS_PER_INCH,
   TYPICAL_CUV_SEAT_H30_METERS,
   TYPICAL_FRONT_BACKREST_THICKNESS_METERS,
@@ -56,6 +65,7 @@ function makeConfig(overrides?: {
         position: overrides?.microphonePosition ?? { x: 0.75, y: 0.35, z: 1.05 },
         enabled: true,
         mounting: 'free',
+        orientation: { x: 0, y: 0, z: 1 },
       },
     ],
     materials: {
@@ -515,6 +525,149 @@ describe('occupants', () => {
     const mouth = occupantMouthPosition(hip);
     expect(mouth.z).toBeGreaterThan(hip.z);
     expect(mouth.x).toBeCloseTo(hip.x);
+  });
+});
+
+describe('microphone mounting / rigid baffle', () => {
+  function withMounting(
+    mounting: SimulationConfig['microphones'][number]['mounting'],
+    overrides?: Parameters<typeof makeConfig>[0],
+  ): SimulationConfig {
+    const config = makeConfig(overrides);
+    config.microphones[0] = applyMicrophoneMounting(
+      config.microphones[0],
+      mounting,
+      config.vehicle,
+      config.interiorObjects,
+    );
+    return config;
+  }
+
+  it('free-field IR is unchanged by a dummy orientation vector', () => {
+    const a = generate(makeConfig({ maxReflectionOrder: 0 }));
+    const b = makeConfig({ maxReflectionOrder: 0 });
+    b.microphones[0].orientation = { x: 1, y: 0, z: 0 };
+    expect(Array.from(generate(b).samples)).toEqual(Array.from(a.samples));
+    expect(a.metadata.microphoneBaffle).toBeNull();
+    expect(a.metadata.microphoneMounting).toBe('free');
+  });
+
+  it('a rear-view-mirror baffle at the same position changes the IR', () => {
+    const vehicle = { widthMeters: 1.5, lengthMeters: 2.8, heightMeters: 1.2 };
+    const position = defaultMicrophonePositionForMounting('rearview-mirror', vehicle);
+    const free = makeConfig({ microphonePosition: position, maxReflectionOrder: 0, vehicle });
+    const mounted = makeConfig({ microphonePosition: position, maxReflectionOrder: 0, vehicle });
+    mounted.microphones[0].mounting = 'rearview-mirror';
+    mounted.microphones[0].orientation = defaultMicrophoneOrientation(
+      'rearview-mirror',
+      vehicle,
+      position,
+    );
+    const freeIr = generate(free);
+    const mountedIr = generate(mounted);
+    expect(irsDiffer(freeIr.samples, mountedIr.samples)).toBe(true);
+    expect(mountedIr.metadata.imageSourceCount).toBeGreaterThan(freeIr.metadata.imageSourceCount);
+    expect(mountedIr.metadata.microphoneBaffle).not.toBeNull();
+    expect(mountedIr.metadata.microphoneBaffle!.extraImageCount).toBeGreaterThan(0);
+    expect(mountedIr.metadata.microphoneMounting).toBe('rearview-mirror');
+  });
+
+  it('local baffle applies even when cabin reflection order is 0', () => {
+    const ir = generate(withMounting('rearview-mirror', { maxReflectionOrder: 0 }));
+    expect(ir.metadata.imageSourceCount).toBeGreaterThan(1);
+    expect(ir.metadata.microphoneBaffle!.extraImageCount).toBeGreaterThan(0);
+  });
+
+  it('higher baffle absorption reduces the extra image amplitude', () => {
+    const incident = [
+      {
+        propagationDelaySeconds: 0.003,
+        propagationDistanceMeters: 1,
+        amplitude: 1,
+        reflectionOrder: 0,
+        imagePosition: { x: 0.75, y: 1.2, z: 0.9 },
+      },
+    ];
+    const microphonePosition = { x: 0.75, y: 0.4, z: 0.9 };
+    const base = {
+      mounting: 'rearview-mirror' as const,
+      planePoint: { x: 0.75, y: 0.3, z: 0.9 },
+      planeNormal: { x: 0, y: 1, z: 0 },
+      diskCenter: { x: 0.75, y: 0.3, z: 0.9 },
+      radiusMeters: 0.25,
+      standoffMeters: 0.1,
+    };
+    const hard = localBaffleContributions(
+      incident,
+      { ...base, absorptionCoefficient: 0.05 },
+      microphonePosition,
+      343,
+      0.25,
+    );
+    const soft = localBaffleContributions(
+      incident,
+      { ...base, absorptionCoefficient: 0.9 },
+      microphonePosition,
+      343,
+      0.25,
+    );
+    expect(hard.length).toBeGreaterThan(0);
+    expect(soft.length).toBe(hard.length);
+    expect(Math.abs(soft[0].amplitude)).toBeLessThan(Math.abs(hard[0].amplitude));
+  });
+
+  it('different mounting surfaces at their presets produce different IRs', () => {
+    const mirror = generate(withMounting('rearview-mirror'));
+    const ceiling = generate(withMounting('ceiling'));
+    const door = generate(withMounting('door'));
+    const dash = generate(withMounting('dashboard'));
+    expect(irsDiffer(mirror.samples, ceiling.samples)).toBe(true);
+    expect(irsDiffer(mirror.samples, door.samples)).toBe(true);
+    expect(irsDiffer(ceiling.samples, dash.samples)).toBe(true);
+  });
+
+  it('rejects a mounted microphone that is too far from its surface', () => {
+    const config = withMounting('rearview-mirror');
+    config.microphones[0].position = { x: 0.75, y: 2.4, z: 0.6 };
+    const errors = validateSimulationConfig(config);
+    expect(errors.some((message) => message.includes('mounting surface'))).toBe(true);
+  });
+
+  it('rejects a mounted microphone on the wrong side of its surface', () => {
+    const config = withMounting('rearview-mirror');
+    config.microphones[0].position = {
+      x: config.microphones[0].position.x,
+      y: 0.02,
+      z: config.microphones[0].position.z,
+    };
+    const errors = validateSimulationConfig(config);
+    expect(errors.some((message) => message.includes('cabin side'))).toBe(true);
+  });
+
+  it('reflects a point across a plane', () => {
+    const reflected = reflectPointAcrossPlane(
+      { x: 0.3, y: 0.4, z: 0.9 },
+      { x: 0, y: 0, z: 0.5 },
+      { x: 0, y: 0, z: 1 },
+    );
+    expect(reflected.x).toBeCloseTo(0.3);
+    expect(reflected.y).toBeCloseTo(0.4);
+    expect(reflected.z).toBeCloseTo(0.1);
+  });
+
+  it('baffle cutoff falls as the housing radius grows', () => {
+    const c = 343;
+    expect(baffleCutoffHz(0.14, c)).toBeLessThan(baffleCutoffHz(0.07, c));
+  });
+
+  it('the ka high-pass removes DC from the extra baffle buffer', () => {
+    const samples = new Float32Array(64);
+    samples.fill(0.5);
+    firstOrderHighpassInPlace(samples, 16000, 800);
+    const end = samples.subarray(48);
+    let energy = 0;
+    for (let i = 0; i < end.length; i++) energy += end[i] * end[i];
+    expect(energy).toBeLessThan(1e-4);
   });
 });
 

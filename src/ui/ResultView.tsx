@@ -181,6 +181,9 @@ function ResultContent({ result }: { result: SimulationResult }): React.JSX.Elem
               {selectedIr.metadata.occupants.filter((occupant) => occupant.enabled).length > 0
                 ? ` · ${selectedIr.metadata.occupants.filter((occupant) => occupant.enabled).length} occupant(s)`
                 : ''}
+              {selectedIr.metadata.microphoneBaffle
+                ? ` · ${selectedIr.metadata.microphoneMounting} baffle a=${(selectedIr.metadata.microphoneBaffle.radiusMeters * 100).toFixed(0)} cm`
+                : ' · free-field mic'}
             </div>
           </>
         )}

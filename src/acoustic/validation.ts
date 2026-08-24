@@ -3,6 +3,7 @@ import { ALL_SURFACES } from './types';
 import {
   MAX_DIMENSION_METERS,
   MAX_IR_DURATION_SECONDS,
+  MAX_MICROPHONE_MOUNT_STANDOFF_METERS,
   MAX_OCCUPANTS,
   MAX_REFLECTION_ORDER_LIMIT,
   MAX_SAMPLE_RATE_HZ,
@@ -11,6 +12,11 @@ import {
   MIN_IR_DURATION_SECONDS,
   MIN_SAMPLE_RATE_HZ,
 } from './constants';
+import {
+  microphoneMountingLabel,
+  resolveMicrophoneBaffle,
+  vectorLength,
+} from './microphoneMounting';
 
 /**
  * Human-readable validation of the full simulation configuration (rule 34).
@@ -48,6 +54,35 @@ export function validateSimulationConfig(config: SimulationConfig): string[] {
   }
   for (const microphone of microphones) {
     validatePositionInside(microphone.position, vehicle, `Microphone "${microphone.label}"`, errors);
+    const orientationLength = vectorLength(microphone.orientation);
+    if (![microphone.orientation.x, microphone.orientation.y, microphone.orientation.z].every(Number.isFinite)) {
+      errors.push(`Microphone "${microphone.label}" look direction contains an invalid number.`);
+    } else if (microphone.mounting !== 'free' && orientationLength < 1e-9) {
+      errors.push(
+        `Microphone "${microphone.label}" look direction must be a non-zero vector.`,
+      );
+    }
+    if (microphone.mounting === 'free') continue;
+    const baffle = resolveMicrophoneBaffle(microphone, {
+      vehicle,
+      materials: config.materials,
+      interiorObjects: config.interiorObjects,
+    });
+    if (!baffle) {
+      errors.push(
+        `Microphone "${microphone.label}" mounting "${microphoneMountingLabel(microphone.mounting)}" could not be resolved.`,
+      );
+      continue;
+    }
+    if (baffle.standoffMeters <= 0) {
+      errors.push(
+        `Microphone "${microphone.label}" must sit on the cabin side of the ${microphoneMountingLabel(microphone.mounting)} mounting surface.`,
+      );
+    } else if (baffle.standoffMeters > MAX_MICROPHONE_MOUNT_STANDOFF_METERS) {
+      errors.push(
+        `Microphone "${microphone.label}" is ${baffle.standoffMeters.toFixed(2)} m from its ${microphoneMountingLabel(microphone.mounting)} mounting surface. Move it within ${MAX_MICROPHONE_MOUNT_STANDOFF_METERS} m, or choose Free field (point receiver).`,
+      );
+    }
   }
 
   for (const surface of ALL_SURFACES) {
@@ -121,7 +156,8 @@ function validateVehicle(vehicle: VehicleGeometry, errors: string[]): void {
 
 /**
  * A position is valid strictly inside the enclosure: 0 < x < W, 0 < y < L,
- * 0 < z < H. Boundary-mounted objects are not yet supported by the solver.
+ * 0 < z < H. Mounted microphones sit at a small interior standoff from the
+ * mounting face, so the capsule remains inside this open interval.
  */
 function validatePositionInside(
   position: Vec3,

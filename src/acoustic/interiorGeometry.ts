@@ -38,6 +38,7 @@ import {
   MIN_PROPAGATION_DISTANCE_METERS,
   SPREADING_REFERENCE_DISTANCE_METERS,
 } from './constants';
+import { objectFaceMatchesBaffle, type MicrophoneBaffle } from './microphoneMounting';
 
 const BOUNDARY_EPSILON_METERS = 1e-6;
 const FACE_INSET_METERS = 1e-4;
@@ -314,6 +315,20 @@ function isAgainstCabinWall(face: ObjectFace, geometry: VehicleGeometry): boolea
   return false;
 }
 
+function facePoint(face: ObjectFace): Vec3 {
+  const point: Vec3 = { x: 0, y: 0, z: 0 };
+  point[face.axis] = face.coordinate;
+  point[face.uAxis] = 0.5 * (face.uMin + face.uMax);
+  point[face.vAxis] = 0.5 * (face.vMin + face.vMax);
+  return point;
+}
+
+function faceNormal(face: ObjectFace): Vec3 {
+  const normal: Vec3 = { x: 0, y: 0, z: 0 };
+  normal[face.axis] = face.outwardSign;
+  return normal;
+}
+
 /**
  * First-order image sources from interior-object faces.
  *
@@ -328,10 +343,16 @@ export function firstOrderObjectReflections(input: {
   geometry: VehicleGeometry;
   speedOfSoundMetersPerSecond: number;
   maxDelaySeconds: number;
+  /**
+   * When a microphone baffle is present, skip object faces that coincide
+   * with the mounting plane so the local bounce is not generated twice.
+   */
+  microphoneBaffle?: MicrophoneBaffle | null;
 }): ImageSourceContribution[] {
   const { sourcePosition, microphonePosition, objects, geometry } = input;
   const maxDistance = input.maxDelaySeconds * input.speedOfSoundMetersPerSecond;
   const contributions: ImageSourceContribution[] = [];
+  const baffle = input.microphoneBaffle ?? null;
 
   for (const object of objects) {
     const reflectionAmplitude = Math.sqrt(1 - object.material.absorptionCoefficient);
@@ -339,6 +360,7 @@ export function firstOrderObjectReflections(input: {
 
     for (const face of objectFaces(object.bounds)) {
       if (isAgainstCabinWall(face, geometry)) continue;
+      if (baffle && objectFaceMatchesBaffle(facePoint(face), faceNormal(face), baffle)) continue;
 
       const sourceOffset = (sourcePosition[face.axis] - face.coordinate) * face.outwardSign;
       const micOffset = (microphonePosition[face.axis] - face.coordinate) * face.outwardSign;
@@ -377,6 +399,7 @@ export function firstOrderObjectReflections(input: {
         propagationDistanceMeters: distanceMeters,
         amplitude: spreading * reflectionAmplitude * toHit * toMic,
         reflectionOrder: 1,
+        imagePosition: image,
       });
     }
   }

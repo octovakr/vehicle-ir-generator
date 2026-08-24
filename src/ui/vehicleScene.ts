@@ -16,9 +16,10 @@
  */
 
 import * as THREE from 'three';
-import type { InteriorObject, OccupantConfig, SimulationConfig, Vec3 } from '../acoustic/types';
+import type { InteriorObject, OccupantConfig, SimulationConfig, Vec3, MicrophoneConfig } from '../acoustic/types';
 import type { VehicleExteriorSpec, VehicleProfile } from '../acoustic/vehicleModels';
 import { getVehicleProfile } from '../acoustic/vehicleModels';
+import { resolveMicrophoneBaffle } from '../acoustic/microphoneMounting';
 import {
   ADULT_CHEST_DEPTH_METERS,
   ADULT_HEAD_DEPTH_METERS,
@@ -85,7 +86,7 @@ export function buildSceneContent(config: SimulationConfig): THREE.Group {
     group.add(buildSourceMarker(source.position, source.label, source.enabled, cabin));
   }
   for (const microphone of config.microphones) {
-    group.add(buildMicrophoneMarker(microphone.position, microphone.label, microphone.enabled, cabin));
+    group.add(buildMicrophoneMarker(microphone, config, cabin));
   }
   return group;
 }
@@ -603,23 +604,70 @@ function buildSourceMarker(
 }
 
 function buildMicrophoneMarker(
-  position: Vec3,
-  label: string,
-  enabled: boolean,
+  microphone: MicrophoneConfig,
+  config: SimulationConfig,
   cabin: { widthMeters: number; lengthMeters: number },
 ): THREE.Group {
   const group = new THREE.Group();
+  const opacity = microphone.enabled ? 1 : 0.3;
   const marker = new THREE.Mesh(
     new THREE.OctahedronGeometry(0.05),
     new THREE.MeshStandardMaterial({
       color: MIC_COLOR,
-      transparent: !enabled,
-      opacity: enabled ? 1 : 0.3,
+      transparent: !microphone.enabled,
+      opacity,
     }),
   );
-  marker.position.copy(simToThree(position, cabin));
-  group.add(marker, makeLabelSprite(label, marker.position, '#58a6ff'));
+  const origin = simToThree(microphone.position, cabin);
+  marker.position.copy(origin);
+  group.add(marker, makeLabelSprite(microphone.label, origin, '#58a6ff'));
+
+  const baffle = resolveMicrophoneBaffle(microphone, {
+    vehicle: config.vehicle,
+    materials: config.materials,
+    interiorObjects: config.interiorObjects,
+  });
+  if (baffle) {
+    group.add(buildBaffleDisk(baffle.diskCenter, baffle.planeNormal, baffle.radiusMeters, cabin, opacity));
+    group.add(buildLookArrow(microphone.position, microphone.orientation, cabin));
+  }
+
   return group;
+}
+
+function simNormalToThree(normal: Vec3): THREE.Vector3 {
+  return new THREE.Vector3(normal.x, normal.z, normal.y).normalize();
+}
+
+function buildBaffleDisk(
+  center: Vec3,
+  normal: Vec3,
+  radiusMeters: number,
+  cabin: { widthMeters: number; lengthMeters: number },
+  opacity: number,
+): THREE.Mesh {
+  const disk = new THREE.Mesh(
+    new THREE.CircleGeometry(radiusMeters, 32),
+    new THREE.MeshStandardMaterial({
+      color: MIC_COLOR,
+      transparent: true,
+      opacity: 0.22 * opacity,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }),
+  );
+  disk.position.copy(simToThree(center, cabin));
+  disk.lookAt(disk.position.clone().add(simNormalToThree(normal)));
+  return disk;
+}
+
+function buildLookArrow(
+  position: Vec3,
+  direction: Vec3,
+  cabin: { widthMeters: number; lengthMeters: number },
+): THREE.ArrowHelper {
+  const origin = simToThree(position, cabin);
+  return new THREE.ArrowHelper(simNormalToThree(direction), origin, 0.14, MIC_COLOR, 0.04, 0.025);
 }
 
 function makeLabelSprite(text: string, position: THREE.Vector3, color: string): THREE.Sprite {
@@ -653,7 +701,7 @@ function clamp(value: number, min: number, max: number): number {
 
 export function disposeObject3D(root: THREE.Object3D): void {
   root.traverse((node) => {
-    if (node instanceof THREE.Mesh || node instanceof THREE.LineSegments) {
+    if (node instanceof THREE.Mesh || node instanceof THREE.LineSegments || node instanceof THREE.Line) {
       node.geometry.dispose();
       const material = node.material as THREE.Material | THREE.Material[];
       if (Array.isArray(material)) material.forEach((item) => item.dispose());

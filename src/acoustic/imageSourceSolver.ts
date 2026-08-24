@@ -12,6 +12,7 @@ import {
   SPREADING_REFERENCE_DISTANCE_METERS,
 } from './constants';
 import { applyObjectAttenuation, firstOrderObjectReflections } from './interiorGeometry';
+import { localBaffleContributions, type MicrophoneBaffle } from './microphoneMounting';
 
 export type { ImageSourceContribution };
 
@@ -70,6 +71,12 @@ export type { ImageSourceContribution };
  *
  *     a_i = a_spread · a_refl
  *
+ * ── Microphone rigid baffle (optional) ──────────────────────────────────────
+ * When `microphoneBaffle` is set, extra first-order images of every incident
+ * arrival are generated across the local mounting plane (microphoneMounting.ts).
+ * Those arrivals are returned separately so the IR generator can apply the
+ * finite-baffle ka high-pass. They are NOT mixed into `contributions` here.
+ *
  * This module is pure math — no UI, rendering, or audio-playback imports.
  */
 
@@ -91,10 +98,22 @@ export interface ImageSourceSolverInput {
    * object-face reflections are added. See interiorGeometry.ts.
    */
   interiorObjects?: readonly InteriorObject[];
+  /**
+   * Optional local rigid baffle at the microphone (rule 29). Applied to every
+   * incident arrival, including the direct path. See microphoneMounting.ts.
+   */
+  microphoneBaffle?: MicrophoneBaffle | null;
 }
 
 export interface ImageSourceSolverOutput {
+  /** Cabin-wall (and interior-object) image-source arrivals. */
   contributions: ImageSourceContribution[];
+  /**
+   * Extra arrivals from the microphone's local rigid baffle.
+   * Empty for a free-field point receiver. Frequency-colored in the IR
+   * generator (ka high-pass); do not mix into `contributions` first.
+   */
+  baffleContributions: ImageSourceContribution[];
   speedOfSoundMetersPerSecond: number;
 }
 
@@ -170,6 +189,7 @@ export function solveImageSources(input: ImageSourceSolverInput): ImageSourceSol
           propagationDistanceMeters: distanceMeters,
           amplitude,
           reflectionOrder: totalOrder,
+          imagePosition,
         };
         contributions.push(
           objects.length > 0
@@ -195,11 +215,24 @@ export function solveImageSources(input: ImageSourceSolverInput): ImageSourceSol
         geometry,
         speedOfSoundMetersPerSecond: c,
         maxDelaySeconds: input.maxDelaySeconds,
+        microphoneBaffle: input.microphoneBaffle ?? null,
       }),
     );
   }
 
-  return { contributions, speedOfSoundMetersPerSecond: c };
+  const baffle = input.microphoneBaffle;
+  const baffleContributions =
+    baffle !== null && baffle !== undefined
+      ? localBaffleContributions(
+          contributions,
+          baffle,
+          microphonePosition,
+          c,
+          input.maxDelaySeconds,
+        )
+      : [];
+
+  return { contributions, baffleContributions, speedOfSoundMetersPerSecond: c };
 }
 
 interface AxisImage {

@@ -21,6 +21,11 @@ import {
   DEFAULT_TEMPERATURE_CELSIUS,
   SEATED_MOUTH_ABOVE_CUSHION_METERS,
 } from '../acoustic/constants';
+import {
+  applyMicrophoneMounting,
+  defaultMicrophoneOrientation,
+  defaultMicrophonePositionForMounting,
+} from '../acoustic/microphoneMounting';
 import { occupantHipPreset, occupantSeatLabel } from '../acoustic/occupants';
 import { getVehicleProfile } from '../acoustic/vehicleModels';
 
@@ -74,11 +79,7 @@ export function zonePresetPosition(
 
 /** Default microphone position: near the rear-view mirror (front-center, high). */
 export function defaultMicrophonePosition(vehicle: VehicleGeometry): Vec3 {
-  return {
-    x: 0.5 * vehicle.widthMeters,
-    y: 0.12 * vehicle.lengthMeters,
-    z: 0.88 * vehicle.heightMeters,
-  };
+  return defaultMicrophonePositionForMounting('rearview-mirror', vehicle);
 }
 
 let idCounter = 0;
@@ -105,12 +106,15 @@ export function createDefaultSource(
 }
 
 export function createDefaultMicrophone(vehicle: VehicleGeometry): MicrophoneConfig {
+  const mounting = 'rearview-mirror';
+  const position = defaultMicrophonePositionForMounting(mounting, vehicle);
   return {
     id: nextId('mic'),
     label: `Mic ${idCounter}`,
-    position: defaultMicrophonePosition(vehicle),
+    position,
     enabled: true,
-    mounting: 'rearview-mirror',
+    mounting,
+    orientation: defaultMicrophoneOrientation(mounting, vehicle, position),
   };
 }
 
@@ -211,9 +215,8 @@ export function applyVehicleModel(
       ...source,
       position: zonePresetPosition(source.zone, vehicle, interiorObjects),
     })),
-    microphones: config.microphones.map((microphone) => ({
-      ...microphone,
-      position: defaultMicrophonePosition(vehicle),
-    })),
+    microphones: config.microphones.map((microphone) =>
+      applyMicrophoneMounting(microphone, microphone.mounting, vehicle, interiorObjects),
+    ),
   };
 }

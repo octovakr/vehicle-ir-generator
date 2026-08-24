@@ -3,7 +3,7 @@
  * All defaults live here — do not scatter magic numbers through the code.
  */
 
-export const SIMULATOR_VERSION = '0.3.0';
+export const SIMULATOR_VERSION = '0.4.0';
 
 /** Conversion: 1 inch = 25.4 mm exactly (SI). */
 export const METERS_PER_INCH = 0.0254;
@@ -154,6 +154,56 @@ export const CARGO_HEIGHT_FRACTION_OF_CABIN = 0.55;
  * ~26 dB/m and yields a few dB through a seat back, ~10 dB through a cushion.
  */
 export const INTERIOR_OBJECT_ATTENUATION_PER_METER = 3;
+
+/**
+ * Distance from a mounting face to the microphone capsule center, meters.
+ * RESEARCHED typical MEMS / electret capsule standoff on automotive trim
+ * (not a measured vehicle spec). Keeps the receiver strictly inside the cabin
+ * so the shoebox ISM remains valid.
+ */
+export const MICROPHONE_CAPSULE_STANDOFF_METERS = 0.015;
+
+/**
+ * Maximum capsule-to-mounting-face distance at which a microphone is still
+ * treated as mounted, meters. Farther than this, the user must choose Free
+ * field or move the capsule. Not a physical limit of the baffle model.
+ */
+export const MAX_MICROPHONE_MOUNT_STANDOFF_METERS = 0.2;
+
+/**
+ * Characteristic radii of the local rigid mounting body, meters.
+ * RESEARCHED typical housing sizes — circular-disk APPROXIMATION, not CAD.
+ *
+ * Used both as the geometric visibility radius of the finite baffle and as
+ * the length `a` in the first-order ka high-pass (cutoff f_c = c / (2π a)).
+ */
+export const REARVIEW_MIRROR_BAFFLE_RADIUS_METERS = 0.07;
+export const CEILING_CONSOLE_BAFFLE_RADIUS_METERS = 0.09;
+export const DASHBOARD_LOCAL_BAFFLE_RADIUS_METERS = 0.12;
+export const A_PILLAR_BAFFLE_RADIUS_METERS = 0.035;
+export const DOOR_CARD_BAFFLE_RADIUS_METERS = 0.1;
+export const WALL_TRIM_BAFFLE_RADIUS_METERS = 0.08;
+
+/**
+ * How far the local mounting face sits inboard of the shoebox wall, meters.
+ * Distinguishes the finite housing (console / door card / trim / pillar)
+ * from the infinite ISM wall so extra baffle images are not double-counted
+ * against Allen–Berkley wall images.
+ *
+ * Door-card inset reuses TYPICAL_DOOR_CARD_THICKNESS_METERS.
+ */
+export const HEADLINER_MOUNT_INSET_METERS = 0.025;
+export const WALL_TRIM_MOUNT_INSET_METERS = 0.03;
+export const A_PILLAR_MOUNT_INSET_METERS = 0.05;
+
+/** Rear-view mirror housing: fraction of cabin length back from the windshield. RESEARCHED. */
+export const REARVIEW_MIRROR_FROM_FRONT_FRACTION = 0.1;
+
+/** Rear-view mirror housing: drop below the headliner, meters. RESEARCHED. */
+export const REARVIEW_MIRROR_BELOW_CEILING_METERS = 0.08;
+
+/** A-pillar inner face: fraction of cabin length back from the windshield. RESEARCHED. */
+export const A_PILLAR_FROM_FRONT_FRACTION = 0.06;
 
 /** IONIQ 5 slim-cockpit dashboard depth, meters. RESEARCHED (press: "slim cockpit module"). */
 export const IONIQ5_DASHBOARD_DEPTH_METERS = 0.32;

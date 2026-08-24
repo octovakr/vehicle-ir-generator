@@ -1,5 +1,6 @@
 import type {
   ImpulseResponse,
+  ImageSourceContribution,
   MicrophoneConfig,
   SimulationConfig,
   SoundSourceConfig,
@@ -7,6 +8,12 @@ import type {
 import { solveImageSources } from './imageSourceSolver';
 import { SIMULATOR_VERSION } from './constants';
 import { acousticInteriorObjects } from './occupants';
+import {
+  addInPlace,
+  baffleCutoffHz,
+  firstOrderHighpassInPlace,
+  resolveMicrophoneBaffle,
+} from './microphoneMounting';
 
 /**
  * Accumulates image-source contributions into a discrete-time impulse
@@ -28,6 +35,10 @@ import { acousticInteriorObjects } from './occupants';
  * avoids the audible dispersion of nearest-sample rounding and is standard
  * practice for broadband ISM renderers. A band-limited deposit is a possible
  * future refinement.
+ *
+ * Mounted microphones add a second buffer of local-baffle arrivals which is
+ * first-order high-passed at f_c = c / (2π a) before being summed in
+ * (finite circular baffle / ka roll-off — see microphoneMounting.ts).
  */
 export function generateImpulseResponse(
   config: SimulationConfig,
@@ -35,6 +46,12 @@ export function generateImpulseResponse(
   microphone: MicrophoneConfig,
 ): ImpulseResponse {
   const { sampleRateHz, irDurationSeconds, maxReflectionOrder, randomSeed } = config.simulation;
+  const interiorObjects = acousticInteriorObjects(config);
+  const microphoneBaffle = resolveMicrophoneBaffle(microphone, {
+    vehicle: config.vehicle,
+    materials: config.materials,
+    interiorObjects,
+  });
 
   const solverOutput = solveImageSources({
     geometry: config.vehicle,
@@ -44,22 +61,28 @@ export function generateImpulseResponse(
     environment: config.environment,
     maxReflectionOrder,
     maxDelaySeconds: irDurationSeconds,
-    interiorObjects: acousticInteriorObjects(config),
+    interiorObjects,
+    microphoneBaffle,
   });
 
   const sampleCount = Math.round(irDurationSeconds * sampleRateHz);
   const samples = new Float32Array(sampleCount);
+  depositContributions(samples, solverOutput.contributions, sampleRateHz);
 
-  for (const contribution of solverOutput.contributions) {
-    const exactSampleIndex = contribution.propagationDelaySeconds * sampleRateHz;
-    const lowerIndex = Math.floor(exactSampleIndex);
-    if (lowerIndex >= sampleCount) continue;
-    const fraction = exactSampleIndex - lowerIndex;
-    samples[lowerIndex] += contribution.amplitude * (1 - fraction);
-    if (lowerIndex + 1 < sampleCount) {
-      samples[lowerIndex + 1] += contribution.amplitude * fraction;
-    }
+  if (microphoneBaffle && solverOutput.baffleContributions.length > 0) {
+    const extra = new Float32Array(sampleCount);
+    depositContributions(extra, solverOutput.baffleContributions, sampleRateHz);
+    firstOrderHighpassInPlace(
+      extra,
+      sampleRateHz,
+      baffleCutoffHz(microphoneBaffle.radiusMeters, solverOutput.speedOfSoundMetersPerSecond),
+    );
+    addInPlace(samples, extra);
   }
+
+  const cutoffHz = microphoneBaffle
+    ? baffleCutoffHz(microphoneBaffle.radiusMeters, solverOutput.speedOfSoundMetersPerSecond)
+    : 0;
 
   return {
     sourceId: source.id,
@@ -81,10 +104,7 @@ export function generateImpulseResponse(
         rear: config.materials.rear.absorptionCoefficient,
       },
       interiorObjectAbsorption: Object.fromEntries(
-        acousticInteriorObjects(config).map((object) => [
-          object.id,
-          object.material.absorptionCoefficient,
-        ]),
+        interiorObjects.map((object) => [object.id, object.material.absorptionCoefficient]),
       ),
       occupants: config.occupants.map((occupant) => ({
         id: occupant.id,
@@ -99,7 +119,36 @@ export function generateImpulseResponse(
       irDurationSeconds,
       maxReflectionOrder,
       randomSeed,
-      imageSourceCount: solverOutput.contributions.length,
+      imageSourceCount: solverOutput.contributions.length + solverOutput.baffleContributions.length,
+      microphoneMounting: microphone.mounting,
+      microphoneOrientation: { ...microphone.orientation },
+      microphoneBaffle: microphoneBaffle
+        ? {
+            radiusMeters: microphoneBaffle.radiusMeters,
+            absorptionCoefficient: microphoneBaffle.absorptionCoefficient,
+            standoffMeters: microphoneBaffle.standoffMeters,
+            cutoffHz,
+            extraImageCount: solverOutput.baffleContributions.length,
+          }
+        : null,
     },
   };
+}
+
+function depositContributions(
+  samples: Float32Array,
+  contributions: readonly ImageSourceContribution[],
+  sampleRateHz: number,
+): void {
+  const sampleCount = samples.length;
+  for (const contribution of contributions) {
+    const exactSampleIndex = contribution.propagationDelaySeconds * sampleRateHz;
+    const lowerIndex = Math.floor(exactSampleIndex);
+    if (lowerIndex >= sampleCount) continue;
+    const fraction = exactSampleIndex - lowerIndex;
+    samples[lowerIndex] += contribution.amplitude * (1 - fraction);
+    if (lowerIndex + 1 < sampleCount) {
+      samples[lowerIndex + 1] += contribution.amplitude * fraction;
+    }
+  }
 }

@@ -8,9 +8,15 @@ export. No server, no network dependency, no account.
 
 ## Features (MVP)
 
-- Rectangular vehicle interior with configurable width / length / height
+- Rectangular cabin enclosure, or named vehicles (2026 IONIQ 5 / 2026 Tucson) whose cabin
+  dimensions and interior objects (seats, dashboard, console, …) are derived from published
+  specification sheets
 - 1–6 speech sources (Zone 1–4 seating presets, freely editable x/y/z, gain, enable/disable)
-- Multiple point-receiver microphones (mounting type recorded for future boundary modeling)
+- Multiple microphones with mounting choice (`free`, rear-view mirror, ceiling, dashboard,
+  A-pillar, door, wall). Free-field stays a point receiver; mounted mics add a finite circular
+  rigid-baffle reflection (documented approximation)
+- Optional seated occupants (up to 4): AABB body boxes with clothing absorption β, path
+  attenuation and first-order face reflections via the same interior-object model as seats
 - Per-surface materials (glass, leather, fabric, carpet, … or custom β), where β is the
   broadband **energy absorption coefficient** (0 ≤ β ≤ 1)
 - Environment: temperature and relative humidity → speed of sound (documented approximation)
@@ -49,6 +55,10 @@ src/
     constants.ts         Centralized defaults, named constants
     environment.ts       Speed of sound c(T, RH) — single source of truth
     materials.ts         Material presets (energy absorption β)
+    vehicleModels.ts     Named vehicle profiles → cabin + interior objects
+    interiorGeometry.ts  Object path attenuation + first-order face reflections
+    occupants.ts         Seated-occupant AABB geometry (clothing β)
+    microphoneMounting.ts Local rigid-baffle model for mounted microphones
     imageSourceSolver.ts ISM: image enumeration, delays, amplitudes
     impulseResponse.ts   Contributions → discrete-time h[n] + metadata
     validation.ts        Human-readable config validation
@@ -72,8 +82,11 @@ the data structures in `src/acoustic/types.ts` only.
 | Speed of sound from temperature & humidity | Approximation (documented linear model) |
 | Spherical spreading 1/d | Physically modeled (re 1 m) |
 | Surface absorption (broadband β, r = √(1−β)) | Approximation (angle/frequency independent) |
-| Microphone mounting / rigid-body effects | **Not modeled** (point receivers; metadata only) |
-| Air absorption, diffraction, scattering, seats/bodies | Future work |
+| Named-vehicle cabins & interior AABBs | Approximation (spec-sheet + researched class-typical sizes) |
+| Interior-object path loss & 1st-order face reflections | Approximation (no diffraction / higher-order object images) |
+| Seated occupants (AABB body + clothing β) | Approximation (not a body mesh or measured insertion loss) |
+| Microphone mounting / rigid-baffle effects | Approximation (finite circular baffle + ka high-pass; not CAD/BEM/directivity) |
+| Air absorption, diffraction, scattering, CAD geometry | Future work |
 
 ## IR output format
 

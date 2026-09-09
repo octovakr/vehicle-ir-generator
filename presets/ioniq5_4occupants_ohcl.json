@@ -1,0 +1,589 @@
+{
+  "id": "ioniq5-4occupants-ohcl",
+  "name": "2026 IONIQ 5 — 4 Occupants (OHCL 2-Core + Rear Headliner)",
+  "description": "16kHz, 250ms IR, 20th reflection order. 4 seated occupants, 4 speech sources at mouth positions, 1st row OHCL dual-core (25mm spacing) and 2nd row headliner L/R microphones.",
+  "config": {
+    "vehicleModelId": "ioniq5-2026",
+    "vehicle": {
+      "widthMeters": 1.46558,
+      "lengthMeters": 3.4209122748685377,
+      "heightMeters": 1.3109199999999999
+    },
+    "interiorObjects": [
+      {
+        "id": "dashboard",
+        "label": "Dashboard",
+        "kind": "dashboard",
+        "bounds": {
+          "min": {
+            "x": 0.02,
+            "y": 0,
+            "z": 0.28
+          },
+          "max": {
+            "x": 1.44558,
+            "y": 0.32,
+            "z": 0.72
+          }
+        },
+        "material": {
+          "id": "plastic",
+          "name": "Hard plastic trim",
+          "absorptionCoefficient": 0.08
+        }
+      },
+      {
+        "id": "center-console",
+        "label": "Center console",
+        "kind": "center-console",
+        "bounds": {
+          "min": {
+            "x": 0.6427900000000001,
+            "y": 0.14400000000000002,
+            "z": 0
+          },
+          "max": {
+            "x": 0.8227900000000001,
+            "y": 1.12,
+            "z": 0.26
+          }
+        },
+        "material": {
+          "id": "plastic",
+          "name": "Hard plastic trim",
+          "absorptionCoefficient": 0.08
+        }
+      },
+      {
+        "id": "steering-wheel",
+        "label": "Steering wheel",
+        "kind": "steering-wheel",
+        "bounds": {
+          "min": {
+            "x": 0.13500000000000006,
+            "y": 0.28500000000000003,
+            "z": 0.49499999999999994
+          },
+          "max": {
+            "x": 0.5050000000000001,
+            "y": 0.34,
+            "z": 0.74775
+          }
+        },
+        "material": {
+          "id": "plastic",
+          "name": "Hard plastic trim",
+          "absorptionCoefficient": 0.08
+        }
+      },
+      {
+        "id": "seat-fl-cushion",
+        "label": "Front left seat cushion",
+        "kind": "seat-cushion",
+        "bounds": {
+          "min": {
+            "x": 0.06,
+            "y": 0.5,
+            "z": 0.15999999999999998
+          },
+          "max": {
+            "x": 0.5800000000000001,
+            "y": 1,
+            "z": 0.3
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-fl-back",
+        "label": "Front left seat backrest",
+        "kind": "seat-back",
+        "bounds": {
+          "min": {
+            "x": 0.06,
+            "y": 1,
+            "z": 0.3
+          },
+          "max": {
+            "x": 0.5800000000000001,
+            "y": 1.263116429771958,
+            "z": 0.94
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-fl-headrest",
+        "label": "Front left seat headrest",
+        "kind": "headrest",
+        "bounds": {
+          "min": {
+            "x": 0.19000000000000006,
+            "y": 1.1631164297719578,
+            "z": 0.94
+          },
+          "max": {
+            "x": 0.45000000000000007,
+            "y": 1.283116429771958,
+            "z": 1.1199999999999999
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-fr-cushion",
+        "label": "Front right seat cushion",
+        "kind": "seat-cushion",
+        "bounds": {
+          "min": {
+            "x": 0.88558,
+            "y": 0.5,
+            "z": 0.15999999999999998
+          },
+          "max": {
+            "x": 1.40558,
+            "y": 1,
+            "z": 0.3
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-fr-back",
+        "label": "Front right seat backrest",
+        "kind": "seat-back",
+        "bounds": {
+          "min": {
+            "x": 0.88558,
+            "y": 1,
+            "z": 0.3
+          },
+          "max": {
+            "x": 1.40558,
+            "y": 1.263116429771958,
+            "z": 0.94
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-fr-headrest",
+        "label": "Front right seat headrest",
+        "kind": "headrest",
+        "bounds": {
+          "min": {
+            "x": 1.01558,
+            "y": 1.1631164297719578,
+            "z": 0.94
+          },
+          "max": {
+            "x": 1.2755800000000002,
+            "y": 1.283116429771958,
+            "z": 1.1199999999999999
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-rl-cushion",
+        "label": "Rear left (60%) seat cushion",
+        "kind": "seat-cushion",
+        "bounds": {
+          "min": {
+            "x": 0.06,
+            "y": 1.8007599999999997,
+            "z": 0.15999999999999998
+          },
+          "max": {
+            "x": 0.867348,
+            "y": 2.28076,
+            "z": 0.3
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-rl-back",
+        "label": "Rear left (60%) seat backrest",
+        "kind": "seat-back",
+        "bounds": {
+          "min": {
+            "x": 0.06,
+            "y": 2.28076,
+            "z": 0.3
+          },
+          "max": {
+            "x": 0.867348,
+            "y": 2.5438764297719576,
+            "z": 0.94
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-rl-headrest",
+        "label": "Rear left (60%) seat headrest",
+        "kind": "headrest",
+        "bounds": {
+          "min": {
+            "x": 0.333674,
+            "y": 2.4438764297719575,
+            "z": 0.94
+          },
+          "max": {
+            "x": 0.593674,
+            "y": 2.5638764297719576,
+            "z": 1.1199999999999999
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-rr-cushion",
+        "label": "Rear right (40%) seat cushion",
+        "kind": "seat-cushion",
+        "bounds": {
+          "min": {
+            "x": 0.867348,
+            "y": 1.8007599999999997,
+            "z": 0.15999999999999998
+          },
+          "max": {
+            "x": 1.40558,
+            "y": 2.28076,
+            "z": 0.3
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-rr-back",
+        "label": "Rear right (40%) seat backrest",
+        "kind": "seat-back",
+        "bounds": {
+          "min": {
+            "x": 0.867348,
+            "y": 2.28076,
+            "z": 0.3
+          },
+          "max": {
+            "x": 1.40558,
+            "y": 2.5438764297719576,
+            "z": 0.94
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      },
+      {
+        "id": "seat-rr-headrest",
+        "label": "Rear right (40%) seat headrest",
+        "kind": "headrest",
+        "bounds": {
+          "min": {
+            "x": 1.0064640000000002,
+            "y": 2.4438764297719575,
+            "z": 0.94
+          },
+          "max": {
+            "x": 1.266464,
+            "y": 2.5638764297719576,
+            "z": 1.1199999999999999
+          }
+        },
+        "material": {
+          "id": "leather",
+          "name": "Leather upholstery",
+          "absorptionCoefficient": 0.35
+        }
+      }
+    ],
+    "occupants": [
+      {
+        "id": "occupant-1",
+        "label": "Front left",
+        "enabled": true,
+        "seat": 1,
+        "hipPosition": {
+          "x": 0.32000000000000006,
+          "y": 0.83,
+          "z": 0.3
+        },
+        "material": {
+          "id": "clothing",
+          "name": "Clothing (average adult)",
+          "absorptionCoefficient": 0.48
+        }
+      },
+      {
+        "id": "occupant-2",
+        "label": "Front right",
+        "enabled": true,
+        "seat": 2,
+        "hipPosition": {
+          "x": 1.14558,
+          "y": 0.83,
+          "z": 0.3
+        },
+        "material": {
+          "id": "clothing",
+          "name": "Clothing (average adult)",
+          "absorptionCoefficient": 0.48
+        }
+      },
+      {
+        "id": "occupant-3",
+        "label": "Rear left",
+        "enabled": true,
+        "seat": 3,
+        "hipPosition": {
+          "x": 0.46367400000000003,
+          "y": 2.1207599999999998,
+          "z": 0.3
+        },
+        "material": {
+          "id": "clothing",
+          "name": "Clothing (average adult)",
+          "absorptionCoefficient": 0.48
+        }
+      },
+      {
+        "id": "occupant-4",
+        "label": "Rear right",
+        "enabled": true,
+        "seat": 4,
+        "hipPosition": {
+          "x": 1.1364640000000001,
+          "y": 2.1207599999999998,
+          "z": 0.3
+        },
+        "material": {
+          "id": "clothing",
+          "name": "Clothing (average adult)",
+          "absorptionCoefficient": 0.48
+        }
+      }
+    ],
+    "sources": [
+      {
+        "id": "source-1",
+        "label": "Source 1 (Front left)",
+        "position": {
+          "x": 0.32000000000000006,
+          "y": 0.77,
+          "z": 0.8999999999999999
+        },
+        "gain": 1,
+        "enabled": true,
+        "zone": 1,
+        "audio": {
+          "kind": "generated",
+          "seed": 42,
+          "durationSeconds": 3
+        }
+      },
+      {
+        "id": "source-2",
+        "label": "Source 2 (Front right)",
+        "position": {
+          "x": 1.14558,
+          "y": 0.77,
+          "z": 0.8999999999999999
+        },
+        "gain": 1,
+        "enabled": true,
+        "zone": 2,
+        "audio": {
+          "kind": "generated",
+          "seed": 43,
+          "durationSeconds": 3
+        }
+      },
+      {
+        "id": "source-3",
+        "label": "Source 3 (Rear left)",
+        "position": {
+          "x": 0.46367400000000003,
+          "y": 2.0607599999999997,
+          "z": 0.8999999999999999
+        },
+        "gain": 1,
+        "enabled": true,
+        "zone": 3,
+        "audio": {
+          "kind": "generated",
+          "seed": 44,
+          "durationSeconds": 3
+        }
+      },
+      {
+        "id": "source-4",
+        "label": "Source 4 (Rear right)",
+        "position": {
+          "x": 1.1364640000000001,
+          "y": 2.0607599999999997,
+          "z": 0.8999999999999999
+        },
+        "gain": 1,
+        "enabled": true,
+        "zone": 4,
+        "audio": {
+          "kind": "generated",
+          "seed": 45,
+          "durationSeconds": 3
+        }
+      }
+    ],
+    "microphones": [
+      {
+        "id": "mic-1",
+        "label": "Mic 1 (Front OHCL - Left Core)",
+        "position": {
+          "x": 0.7203,
+          "y": 0.5,
+          "z": 1.2709
+        },
+        "enabled": true,
+        "mounting": "ceiling",
+        "orientation": {
+          "x": 0,
+          "y": 0,
+          "z": -1
+        }
+      },
+      {
+        "id": "mic-2",
+        "label": "Mic 2 (Front OHCL - Right Core)",
+        "position": {
+          "x": 0.7453,
+          "y": 0.5,
+          "z": 1.2709
+        },
+        "enabled": true,
+        "mounting": "ceiling",
+        "orientation": {
+          "x": 0,
+          "y": 0,
+          "z": -1
+        }
+      },
+      {
+        "id": "mic-3",
+        "label": "Mic 3 (Rear Headliner - Left)",
+        "position": {
+          "x": 0.15,
+          "y": 2.05,
+          "z": 1.2709
+        },
+        "enabled": true,
+        "mounting": "ceiling",
+        "orientation": {
+          "x": 0,
+          "y": 0,
+          "z": -1
+        }
+      },
+      {
+        "id": "mic-4",
+        "label": "Mic 4 (Rear Headliner - Right)",
+        "position": {
+          "x": 1.3156,
+          "y": 2.05,
+          "z": 1.2709
+        },
+        "enabled": true,
+        "mounting": "ceiling",
+        "orientation": {
+          "x": 0,
+          "y": 0,
+          "z": -1
+        }
+      }
+    ],
+    "materials": {
+      "floor": {
+        "id": "carpet",
+        "name": "Automotive carpet",
+        "absorptionCoefficient": 0.3
+      },
+      "ceiling": {
+        "id": "fabric",
+        "name": "Fabric upholstery / headliner",
+        "absorptionCoefficient": 0.45
+      },
+      "left": {
+        "id": "plastic",
+        "name": "Hard plastic trim",
+        "absorptionCoefficient": 0.08
+      },
+      "right": {
+        "id": "plastic",
+        "name": "Hard plastic trim",
+        "absorptionCoefficient": 0.08
+      },
+      "front": {
+        "id": "glass",
+        "name": "Glass (window / windshield)",
+        "absorptionCoefficient": 0.05
+      },
+      "rear": {
+        "id": "glass",
+        "name": "Glass (window / windshield)",
+        "absorptionCoefficient": 0.05
+      }
+    },
+    "environment": {
+      "temperatureCelsius": 20,
+      "relativeHumidityPercent": 50
+    },
+    "simulation": {
+      "sampleRateHz": 16000,
+      "irDurationSeconds": 0.25,
+      "maxReflectionOrder": 20,
+      "randomSeed": 42
+    }
+  }
+}

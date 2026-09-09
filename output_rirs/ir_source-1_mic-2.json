@@ -1,0 +1,129 @@
+{
+  "simulatorVersion": "0.4.0",
+  "vehicleModelId": "ioniq5-2026",
+  "vehicle": {
+    "widthMeters": 1.46558,
+    "lengthMeters": 3.4209122748685377,
+    "heightMeters": 1.3109199999999999
+  },
+  "sourcePosition": {
+    "x": 0.32000000000000006,
+    "y": 0.77,
+    "z": 0.8999999999999999
+  },
+  "microphonePosition": {
+    "x": 0.7453,
+    "y": 0.5,
+    "z": 1.2709
+  },
+  "surfaceAbsorption": {
+    "floor": 0.3,
+    "ceiling": 0.45,
+    "left": 0.08,
+    "right": 0.08,
+    "front": 0.05,
+    "rear": 0.05
+  },
+  "interiorObjectAbsorption": {
+    "dashboard": 0.08,
+    "center-console": 0.08,
+    "steering-wheel": 0.08,
+    "seat-fl-cushion": 0.35,
+    "seat-fl-back": 0.35,
+    "seat-fl-headrest": 0.35,
+    "seat-fr-cushion": 0.35,
+    "seat-fr-back": 0.35,
+    "seat-fr-headrest": 0.35,
+    "seat-rl-cushion": 0.35,
+    "seat-rl-back": 0.35,
+    "seat-rl-headrest": 0.35,
+    "seat-rr-cushion": 0.35,
+    "seat-rr-back": 0.35,
+    "seat-rr-headrest": 0.35,
+    "occupant-1-thighs": 0.48,
+    "occupant-1-torso": 0.48,
+    "occupant-1-head": 0.48,
+    "occupant-1-shins": 0.48,
+    "occupant-2-thighs": 0.48,
+    "occupant-2-torso": 0.48,
+    "occupant-2-head": 0.48,
+    "occupant-2-shins": 0.48,
+    "occupant-3-thighs": 0.48,
+    "occupant-3-torso": 0.48,
+    "occupant-3-head": 0.48,
+    "occupant-3-shins": 0.48,
+    "occupant-4-thighs": 0.48,
+    "occupant-4-torso": 0.48,
+    "occupant-4-head": 0.48,
+    "occupant-4-shins": 0.48
+  },
+  "occupants": [
+    {
+      "id": "occupant-1",
+      "seat": 1,
+      "enabled": true,
+      "hipPosition": {
+        "x": 0.32000000000000006,
+        "y": 0.83,
+        "z": 0.3
+      },
+      "absorptionCoefficient": 0.48
+    },
+    {
+      "id": "occupant-2",
+      "seat": 2,
+      "enabled": true,
+      "hipPosition": {
+        "x": 1.14558,
+        "y": 0.83,
+        "z": 0.3
+      },
+      "absorptionCoefficient": 0.48
+    },
+    {
+      "id": "occupant-3",
+      "seat": 3,
+      "enabled": true,
+      "hipPosition": {
+        "x": 0.46367400000000003,
+        "y": 2.1207599999999998,
+        "z": 0.3
+      },
+      "absorptionCoefficient": 0.48
+    },
+    {
+      "id": "occupant-4",
+      "seat": 4,
+      "enabled": true,
+      "hipPosition": {
+        "x": 1.1364640000000001,
+        "y": 2.1207599999999998,
+        "z": 0.3
+      },
+      "absorptionCoefficient": 0.48
+    }
+  ],
+  "environment": {
+    "temperatureCelsius": 20,
+    "relativeHumidityPercent": 50
+  },
+  "speedOfSoundMetersPerSecond": 344.02,
+  "sampleRateHz": 16000,
+  "irDurationSeconds": 0.25,
+  "maxReflectionOrder": 20,
+  "randomSeed": 42,
+  "imageSourceCount": 15447,
+  "microphoneMounting": "ceiling",
+  "microphoneOrientation": {
+    "x": 0,
+    "y": 0,
+    "z": -1
+  },
+  "microphoneBaffle": {
+    "radiusMeters": 0.09,
+    "absorptionCoefficient": 0.45,
+    "standoffMeters": 0.015020000000000033,
+    "cutoffHz": 608.360928027487,
+    "extraImageCount": 3923
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "id": "default-rectangular",
+  "name": "Default — Rectangular Cabin (Single Source & Mic)",
+  "description": "Original baseline ISM enclosure: single speech source in Zone 1, single microphone near the rearview mirror.",
+  "config": {
+    "vehicleModelId": "rectangular",
+    "vehicle": {
+      "widthMeters": 1.5,
+      "lengthMeters": 2.8,
+      "heightMeters": 1.2
+    },
+    "interiorObjects": [],
+    "occupants": [],
+    "sources": [
+      {
+        "id": "source-1",
+        "label": "Source 1",
+        "position": {
+          "x": 0.405,
+          "y": 0.84,
+          "z": 0.8999999999999999
+        },
+        "gain": 1,
+        "enabled": true,
+        "zone": 1,
+        "audio": {
+          "kind": "generated",
+          "seed": 42,
+          "durationSeconds": 3
+        }
+      }
+    ],
+    "microphones": [
+      {
+        "id": "mic-2",
+        "label": "Mic 2",
+        "position": {
+          "x": 0.75,
+          "y": 0.295,
+          "z": 1.1199999999999999
+        },
+        "enabled": true,
+        "mounting": "rearview-mirror",
+        "orientation": {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        }
+      }
+    ],
+    "materials": {
+      "floor": {
+        "id": "carpet",
+        "name": "Automotive carpet",
+        "absorptionCoefficient": 0.3
+      },
+      "ceiling": {
+        "id": "fabric",
+        "name": "Fabric upholstery / headliner",
+        "absorptionCoefficient": 0.45
+      },
+      "left": {
+        "id": "plastic",
+        "name": "Hard plastic trim",
+        "absorptionCoefficient": 0.08
+      },
+      "right": {
+        "id": "plastic",
+        "name": "Hard plastic trim",
+        "absorptionCoefficient": 0.08
+      },
+      "front": {
+        "id": "glass",
+        "name": "Glass (window / windshield)",
+        "absorptionCoefficient": 0.05
+      },
+      "rear": {
+        "id": "fabric",
+        "name": "Fabric upholstery / headliner",
+        "absorptionCoefficient": 0.45
+      }
+    },
+    "environment": {
+      "temperatureCelsius": 20,
+      "relativeHumidityPercent": 50
+    },
+    "simulation": {
+      "sampleRateHz": 16000,
+      "irDurationSeconds": 0.25,
+      "maxReflectionOrder": 20,
+      "randomSeed": 42
+    }
+  }
+}

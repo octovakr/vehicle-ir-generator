@@ -16,6 +16,7 @@ import { SourcesSection } from './SourcesSection';
 import { MicrophonesSection } from './MicrophonesSection';
 import { OccupantsSection } from './OccupantsSection';
 import { MaterialsSection } from './MaterialsSection';
+import { PresetsSection } from './PresetsSection';
 
 const SAMPLE_RATE_OPTIONS = [
   { value: '8000', label: '8 000 Hz' },
@@ -37,6 +38,7 @@ export function ControlPanel({ onGenerate }: { onGenerate: () => void }): React.
 
   return (
     <div className="control-panel">
+      <PresetsSection />
       <SourcesSection />
       <MicrophonesSection />
       <OccupantsSection />

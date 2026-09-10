@@ -81,3 +81,24 @@ function browserOpenFile(): Promise<OpenedAudioFile | null> {
     input.click();
   });
 }
+
+/** Open a local text/JSON file via file input dialog. */
+export function openLocalTextFile(
+  accept = '.json,application/json',
+): Promise<{ fileName: string; content: string } | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) {
+        resolve(null);
+        return;
+      }
+      const content = await file.text();
+      resolve({ fileName: file.name, content });
+    };
+    input.click();
+  });
+}
